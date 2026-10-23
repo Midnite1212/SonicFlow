@@ -12,3 +12,6 @@ bench/results/*
 
 models/
 .DS_Store
+
+client/macos/.build/
+client/macos/build/

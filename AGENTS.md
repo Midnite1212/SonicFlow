@@ -6,7 +6,7 @@ SonicFlow is a local dictation engine whose whole reason to exist is speed. Ever
 
 - `engine/` — Python 3.12, managed by `uv`. FastAPI server (`server.py`), backend protocols (`backends/base.py`), registry (`backends/registry.py`), bench CLI (`bench/cli.py`).
 - `bench/corpus/` — `manifest.jsonl` is the source of truth; `make_corpus.sh` generates audio into `audio/` (gitignored).
-- `client/` — native macOS client, Swift (not started).
+- `client/macos/` — Swift package: `SonicFlowCore` (pure, unit-tested logic) and the `SonicFlow` menu-bar app. Build with `scripts/install.sh`, test with `scripts/test.sh`; never commit `.build/` or `build/`.
 - `docs/` — architecture, protocol, latency budget, roadmap, ADRs.
 
 ## Commands

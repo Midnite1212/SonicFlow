@@ -13,6 +13,7 @@
 - [ ] v0.4 macOS client: menu bar, hold-to-talk + toggle hotkey, paste into the focused app, latency HUD
   - [x] Terminal mic client, hold Option to talk (#13)
   - [x] Warm-up on hotkey press removes the idle penalty (#14)
+  - [x] Swift menu-bar app: hold Option, pill with live waveform, paste (#19)
 - [ ] v0.5 Engine as a launchd daemon; optional LAN bind so the Mac Studio serves the laptop
   - [x] LaunchAgent with `sonicflow-service`, engine deployed to Application Support (#17)
 
