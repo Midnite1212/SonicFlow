@@ -19,10 +19,20 @@ def _parakeet(name: str, repo_id: str) -> Callable[[], ASRBackend]:
     return factory
 
 
+def _whisper(name: str, repo_id: str) -> Callable[[], ASRBackend]:
+    def factory() -> ASRBackend:
+        from sonicflow.backends.whisper import WhisperASR
+
+        return WhisperASR(name, repo_id)
+
+    return factory
+
+
 # Factories import their heavy dependencies lazily so only the selected backend pays load cost.
 ASR_BACKENDS: dict[str, Callable[[], ASRBackend]] = {
     "parakeet-v2": _parakeet("parakeet-v2", "mlx-community/parakeet-tdt-0.6b-v2"),
     "parakeet-v3": _parakeet("parakeet-v3", "mlx-community/parakeet-tdt-0.6b-v3"),
+    "whisper-turbo": _whisper("whisper-turbo", "mlx-community/whisper-large-v3-turbo"),
 }
 
 CLEANUP_BACKENDS: dict[str, Callable[[], CleanupBackend]] = {
