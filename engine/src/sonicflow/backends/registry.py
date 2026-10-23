@@ -29,6 +29,15 @@ def _whisper(name: str, repo_id: str) -> Callable[[], ASRBackend]:
     return factory
 
 
+def _llm(name: str, repo_id: str) -> Callable[[], CleanupBackend]:
+    def factory() -> CleanupBackend:
+        from sonicflow.backends.llm import LLMCleanup
+
+        return LLMCleanup(name, repo_id)
+
+    return factory
+
+
 # Factories import their heavy dependencies lazily so only the selected backend pays load cost.
 ASR_BACKENDS: dict[str, Callable[[], ASRBackend]] = {
     "parakeet-v2": _parakeet("parakeet-v2", "mlx-community/parakeet-tdt-0.6b-v2"),
@@ -39,6 +48,8 @@ ASR_BACKENDS: dict[str, Callable[[], ASRBackend]] = {
 CLEANUP_BACKENDS: dict[str, Callable[[], CleanupBackend]] = {
     "none": PassthroughCleanup,
     "rules": RulesCleanup,
+    "qwen3-1.7b": _llm("qwen3-1.7b", "mlx-community/Qwen3-1.7B-4bit"),
+    "qwen3-4b": _llm("qwen3-4b", "mlx-community/Qwen3-4B-Instruct-2507-4bit"),
 }
 
 

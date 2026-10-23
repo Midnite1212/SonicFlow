@@ -22,6 +22,9 @@ parakeet = [
 whisper = [
     "mlx-whisper>=0.4.3",
 ]
+llm = [
+    "mlx-lm>=0.32.2",
+]
 
 [dependency-groups]
 dev = [
