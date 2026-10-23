@@ -12,7 +12,7 @@ Status: **v0 groundwork.** The engine skeleton, wire protocol and benchmark harn
 | `bench/corpus/` | Benchmark manifest plus TTS generator; audio is generated locally |
 | `bench/results/` | Bench output JSON (gitignored) |
 | `docs/` | Architecture, protocol, latency budget, roadmap, ADRs |
-| `client/` | Native macOS client (planned, Swift) |
+| `client/macos/` | Swift menu-bar app: hotkey, mic capture, pill, paste |
 
 ## Quick start
 
@@ -38,6 +38,15 @@ uv run sonicflow-service uninstall
 ```
 
 `install --asr <name> --cleanup <name>` picks backends (default `parakeet-v2` + `qwen3-1.7b`); rerun `install` after pulling engine changes. Models must already be in the Hugging Face cache (run the bench or the engine once), since the service runs offline. Logs: `~/Library/Logs/SonicFlow/engine.log`. While the service runs, `uv run sonicflow` can't bind port 8765.
+
+## Menu-bar app
+
+```sh
+client/macos/scripts/install.sh   # build, sign, install to ~/Applications, launch
+client/macos/scripts/test.sh      # Swift unit tests
+```
+
+Hold **Option** anywhere to dictate; a pill with a live waveform appears at the bottom of the screen and the cleaned text is pasted into the focused app on release. The app talks to the background engine, so install that first. On first launch it asks for Microphone, Input Monitoring and Accessibility. Builds are signed with a local self-signed "SonicFlow Dev" identity (created on first build in its own keychain) so those grants survive rebuilds.
 
 ## Dictate from the terminal
 
