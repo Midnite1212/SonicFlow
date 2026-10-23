@@ -9,11 +9,12 @@ from contextlib import asynccontextmanager
 
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
 
 from sonicflow.backends.base import ASRBackend, ASRStream, CleanupBackend, CleanupContext
-from sonicflow.backends.registry import create_asr, create_cleanup
-from sonicflow.config import Settings
+from sonicflow.backends.registry import ASR_BACKENDS, CLEANUP_BACKENDS, create_asr, create_cleanup
+from sonicflow.config import Settings, save_backend_choice
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +32,16 @@ def _log_failure(future: Future) -> None:
         logger.warning("warm-up failed: %r", error)
 
 
+class BackendChoice(BaseModel):
+    asr: str | None = None
+    cleanup: str | None = None
+
+
 class Engine:
     def __init__(self, asr: ASRBackend, cleanup: CleanupBackend) -> None:
         self.asr = asr
         self.cleanup = cleanup
+        self._switching = asyncio.Lock()
         # MLX and most local runtimes are not safe to drive from several threads at once.
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="inference")
 
@@ -49,6 +56,27 @@ class Engine:
     def _warm(self) -> None:
         self.asr.warm()
         self.cleanup.warm()
+
+    async def switch(self, choice: BackendChoice) -> None:
+        """Loads the requested backends first and swaps only if every load succeeds."""
+        async with self._switching:
+            asr = create_asr(choice.asr) if choice.asr not in (None, self.asr.name) else None
+            cleanup = (
+                create_cleanup(choice.cleanup)
+                if choice.cleanup not in (None, self.cleanup.name)
+                else None
+            )
+            if asr is not None:
+                await self.run(asr.load)
+            if cleanup is not None:
+                await self.run(cleanup.load)
+            replaced = [old for old, new in ((self.asr, asr), (self.cleanup, cleanup)) if new]
+            self.asr = asr or self.asr
+            self.cleanup = cleanup or self.cleanup
+            # Utterances already running hold their own references, so this only frees caches
+            # once they finish; it runs on the inference thread after any queued work.
+            for backend in replaced:
+                await self.run(backend.unload)
 
     def shutdown(self) -> None:
         self._executor.shutdown(wait=True)
@@ -68,12 +96,32 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
 
     @app.get("/health")
     def health() -> dict[str, str]:
-        return {"status": "ok", "asr": asr.name, "cleanup": cleanup.name}
+        return {"status": "ok", "asr": engine.asr.name, "cleanup": engine.cleanup.name}
+
+    @app.get("/v1/backends")
+    def backends() -> dict[str, dict]:
+        return {
+            "asr": {"active": engine.asr.name, "available": sorted(ASR_BACKENDS)},
+            "cleanup": {"active": engine.cleanup.name, "available": sorted(CLEANUP_BACKENDS)},
+        }
+
+    @app.post("/v1/config")
+    async def configure(choice: BackendChoice) -> dict[str, str]:
+        try:
+            await engine.switch(choice)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from None
+        except Exception as error:
+            logger.warning("backend load failed: %r", error)
+            raise HTTPException(status_code=500, detail=f"failed to load: {error}") from None
+        save_backend_choice(engine.asr.name, engine.cleanup.name)
+        return health()
 
     @app.websocket("/v1/dictate")
     async def dictate(ws: WebSocket) -> None:
         await ws.accept()
         stream: ASRStream | None = None
+        cleanup = engine.cleanup
         context = CleanupContext()
 
         async def send_error(message: str) -> None:
@@ -97,7 +145,8 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
                 event = json.loads(message["text"])
                 match event.get("type"):
                     case "start":
-                        stream = await engine.run(asr.stream)
+                        stream = await engine.run(engine.asr.stream)
+                        cleanup = engine.cleanup
                         engine.warm_in_background()
                         context = CleanupContext(
                             app_bundle_id=event.get("app"),

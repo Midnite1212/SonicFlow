@@ -91,6 +91,10 @@ class LLMCleanup(CleanupBackend):
 
         self._rewrite("Send it Friday, no wait, Thursday.")
 
+    def unload(self) -> None:
+        del self._model, self._tokenizer, self._cache
+        mx.clear_cache()
+
     def warm(self) -> None:
         logits = self._model(mx.array(self._encode(self._suffix)[:1])[None], cache=self._cache)
         mx.eval(logits)
