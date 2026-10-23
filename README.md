@@ -25,7 +25,7 @@ uv run sonicflow-bench --asr <backend>
 SONICFLOW_ASR=<backend> uv run sonicflow   # ws://127.0.0.1:8765/v1/dictate
 ```
 
-Current best on M3 Pro: `uv sync --all-extras`, then `SONICFLOW_ASR=parakeet-v2 SONICFLOW_CLEANUP=qwen3-1.7b uv run sonicflow`.
+Current best on M3 Pro: `uv sync --all-extras`, then `SONICFLOW_ASR=parakeet-v2 SONICFLOW_CLEANUP=qwen3-4b uv run sonicflow` (`qwen3-1.7b` is ~130 ms faster per correction but less accurate).
 
 ## Run the engine in the background
 
@@ -37,7 +37,7 @@ uv run sonicflow-service restart
 uv run sonicflow-service uninstall
 ```
 
-`install --asr <name> --cleanup <name>` picks backends (default `parakeet-v2` + `qwen3-1.7b`); rerun `install` after pulling engine changes. Models must already be in the Hugging Face cache (run the bench or the engine once), since the service runs offline. Logs: `~/Library/Logs/SonicFlow/engine.log`. While the service runs, `uv run sonicflow` can't bind port 8765.
+`install --asr <name> --cleanup <name>` picks backends (default `parakeet-v2` + `qwen3-4b`); rerun `install` after pulling engine changes. Models must already be in the Hugging Face cache (run the bench or the engine once), since the service runs offline. Logs: `~/Library/Logs/SonicFlow/engine.log`. While the service runs, `uv run sonicflow` can't bind port 8765.
 
 ## Menu-bar app
 

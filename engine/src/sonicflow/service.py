@@ -160,7 +160,7 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     install_parser = commands.add_parser("install", help="install and start at login")
     install_parser.add_argument("--asr", default="parakeet-v2")
-    install_parser.add_argument("--cleanup", default="qwen3-1.7b")
+    install_parser.add_argument("--cleanup", default="qwen3-4b")
     commands.add_parser("uninstall", help="stop and remove from login")
     commands.add_parser("restart", help="restart the engine")
     commands.add_parser("status", help="show agent and engine state")

@@ -10,3 +10,11 @@
 {"id": "correction-03", "kind": "correction", "spoken": "The meeting is at three, actually make that four o'clock.", "clean": "The meeting is at 4 o'clock."}
 {"id": "code-01", "kind": "code", "spoken": "Rename the function get user profile to fetch user profile.", "clean": "Rename the function getUserProfile to fetchUserProfile."}
 {"id": "long-01", "kind": "plain", "spoken": "Hey team, quick update on the migration. We finished moving the read path last week and the latency numbers look solid. This week we are tackling the write path, which is trickier because of the retry logic. If anything blocks us I will flag it in the channel before Thursday.", "clean": "Hey team, quick update on the migration. We finished moving the read path last week and the latency numbers look solid. This week we are tackling the write path, which is trickier because of the retry logic. If anything blocks us, I will flag it in the channel before Thursday."}
+{"id": "correction-04", "kind": "correction", "spoken": "Let's meet on Monday, no wait, Tuesday.", "clean": "Let's meet on Tuesday."}
+{"id": "correction-05", "kind": "correction", "spoken": "Please call Sam, sorry I mean Alex, tomorrow morning.", "clean": "Please call Alex tomorrow morning."}
+{"id": "correction-06", "kind": "correction", "spoken": "The bug is in the parser, scratch that, the lexer.", "clean": "The bug is in the lexer."}
+{"id": "correction-07", "kind": "correction", "spoken": "We should deploy at five, actually make that six.", "clean": "We should deploy at 6."}
+{"id": "filler-03", "kind": "filler", "spoken": "I was like really happy with the results, you know.", "clean": "I was really happy with the results."}
+{"id": "literal-01", "kind": "literal", "spoken": "I like the new design a lot.", "clean": "I like the new design a lot."}
+{"id": "literal-02", "kind": "literal", "spoken": "Do you know when the release is planned?", "clean": "Do you know when the release is planned?"}
+{"id": "literal-03", "kind": "literal", "spoken": "It looks like a race condition in the scheduler.", "clean": "It looks like a race condition in the scheduler."}
