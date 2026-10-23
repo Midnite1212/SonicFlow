@@ -34,6 +34,10 @@ SONICFLOW_ASR=<name> uv run sonicflow      # serve on 127.0.0.1:8765
 9. **Dependencies earn their place.** Backend-only dependencies go in an optional extra named after the backend, never in the core dependency list. A new core dependency needs an ADR.
 10. **No Electron, no webviews.** The client is native Swift.
 
+## Workflow
+
+Every step on the roadmap gets a GitHub issue (goal plus a step checklist) and lands through its own PR that closes it. Before merging: `ruff check`, `ruff format --check`, `pytest`, and a bench run if the hot path changed, with the bench row in the PR. Squash-merge and delete the branch; `main` is the timeline.
+
 ## Conventions
 
 - Audio on the wire and inside the engine is mono 16 kHz. Wire format is PCM16 little-endian; backends receive float32 in [-1, 1].
