@@ -25,9 +25,12 @@ uv run sonicflow-bench --asr <backend>
 SONICFLOW_ASR=<backend> uv run sonicflow   # ws://127.0.0.1:8765/v1/dictate
 ```
 
+Current best on M3 Pro: `uv sync --all-extras`, then `SONICFLOW_ASR=parakeet-v2 SONICFLOW_CLEANUP=qwen3-1.7b uv run sonicflow`.
+
 ## Model credits
 
 - [Parakeet TDT 0.6B](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) by NVIDIA, CC-BY-4.0, run via [parakeet-mlx](https://github.com/senstella/parakeet-mlx)
+- [Qwen3](https://huggingface.co/Qwen) 1.7B and 4B Instruct 2507 by Alibaba Qwen, Apache-2.0, run via [mlx-lm](https://github.com/ml-explore/mlx-lm)
 - [Whisper large-v3-turbo](https://huggingface.co/openai/whisper-large-v3-turbo) by OpenAI, MIT, run via [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
 
 ## Docs

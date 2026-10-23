@@ -32,5 +32,9 @@ Accuracy floor: corpus WER (raw vs spoken) ≤ 5% on the synthetic corpus; re-ba
 | 2026-10-23 | Apple M3 Pro | whisper-turbo | none | 595–602 / 712–721 ms | 8.8% | — |
 | 2026-10-23 | Apple M3 Pro | parakeet-v2 | none | (same runs as above) | 7.1% | 15.8% |
 | 2026-10-23 | Apple M3 Pro | parakeet-v2 | rules | 107–115 / 182–186 ms | 7.1% | 12.0% |
+| 2026-10-23 | Apple M3 Pro | parakeet-v2 | qwen3-1.7b | 112–114 / 275–303 ms | 7.1% | 5.7% |
+| 2026-10-23 | Apple M3 Pro | parakeet-v2 | qwen3-4b | 127–128 / 459–469 ms | 7.1% | 5.1% |
 
 Ranges span two runs with warm models; load is ~1.2 s once cached. Synthetic-corpus WER over-counts number and compound formatting ("ten thirty" vs "10.30", "standup" vs "stand up"), so the absolute figures are pessimistic; the v2/v3 gap is real ("write path" → "right path" in both, extra misses in v3). Whisper pads every input to a 30 s window, so its cost is ~580 ms even for a 2 s clip; it drops some fillers on its own and formats identifiers and sentences better, but misses the raw budget.
+
+LLM cleanup only runs on the 4 items `needs_llm()` flags, so its cost shows at p95: per rewrite, qwen3-1.7b takes 129–173 ms and qwen3-4b 230–353 ms on top of ASR. Both resolve all three self-corrections; only 4B also drops the ambiguous "like". Both drop a leading "Let's" in "Let's ship it on Friday, no wait, Thursday".
