@@ -54,6 +54,7 @@ final class DictationController {
             Task { @MainActor in self?.pill.model.push(level) }
         }
         engine.connect()
+        applyMicrophonePreference()
         installHotkey()
 
         // Grants made in System Settings don't notify the app, so poll until everything is allowed.
@@ -62,8 +63,18 @@ final class DictationController {
         }
     }
 
+    private func applyMicrophonePreference() {
+        guard permissions.microphone else { return }
+        let warm = Preferences.keepMicrophoneReady
+        if audio.keepWarm != warm {
+            audio.setKeepWarm(warm)
+            Log.event("microphone \(warm ? "kept ready" : "started on press")")
+        }
+    }
+
     private func refreshPermissions() {
         permissions = Permissions.current()
+        applyMicrophonePreference()
         installHotkey()
         if permissions.microphone, permissions.accessibility, hotkeyActive {
             permissionTimer?.invalidate()
@@ -103,8 +114,10 @@ final class DictationController {
             }
         switch event {
         case .start: beginDictation()
-        case .stop: endDictation(deliver: true)
-        case .cancel: endDictation(deliver: false)
+        case .stop: endDictation(deliver: true, reason: nil)
+        case .cancel:
+            let reason = if case .other = input { "other input" } else { "short tap" }
+            endDictation(deliver: false, reason: reason)
         case nil: break
         }
     }
@@ -134,12 +147,12 @@ final class DictationController {
         pill.show()
     }
 
-    private func endDictation(deliver: Bool) {
+    private func endDictation(deliver: Bool, reason: String?) {
         guard state == .listening else { return }
         audio.stop()
         releasedAt = ProcessInfo.processInfo.systemUptime
         guard deliver else {
-            Log.event("dictation cancelled")
+            Log.event("dictation cancelled: \(reason ?? "unknown")")
             engine.finish { _ in }
             pill.hide()
             state = connected ? .idle : .offline
