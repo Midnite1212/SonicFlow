@@ -27,6 +27,18 @@ SONICFLOW_ASR=<backend> uv run sonicflow   # ws://127.0.0.1:8765/v1/dictate
 
 Current best on M3 Pro: `uv sync --all-extras`, then `SONICFLOW_ASR=parakeet-v2 SONICFLOW_CLEANUP=qwen3-1.7b uv run sonicflow`.
 
+## Dictate from the terminal
+
+With the engine running, in a second terminal:
+
+```sh
+cd engine
+uv run sonicflow-mic          # hold Option, speak, release → pasted into the focused app
+uv run sonicflow-mic --no-paste
+```
+
+The terminal app needs Microphone, Accessibility and Input Monitoring permission (System Settings → Privacy & Security). Tapping Option or using it as a modifier (Option+arrow) cancels instead of dictating. The previous clipboard text is restored after pasting.
+
 ## Model credits
 
 - [Parakeet TDT 0.6B](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) by NVIDIA, CC-BY-4.0, run via [parakeet-mlx](https://github.com/senstella/parakeet-mlx)
