@@ -38,3 +38,7 @@ Accuracy floor: corpus WER (raw vs spoken) ≤ 5% on the synthetic corpus; re-ba
 Ranges span two runs with warm models; load is ~1.2 s once cached. Synthetic-corpus WER over-counts number and compound formatting ("ten thirty" vs "10.30", "standup" vs "stand up"), so the absolute figures are pessimistic; the v2/v3 gap is real ("write path" → "right path" in both, extra misses in v3). Whisper pads every input to a 30 s window, so its cost is ~580 ms even for a 2 s clip; it drops some fillers on its own and formats identifiers and sentences better, but misses the raw budget.
 
 LLM cleanup only runs on the 4 items `needs_llm()` flags, so its cost shows at p95: per rewrite, qwen3-1.7b takes 129–173 ms and qwen3-4b 230–353 ms on top of ASR. Both resolve all three self-corrections; only 4B also drops the ambiguous "like". Both drop a leading "Let's" in "Let's ship it on Friday, no wait, Thursday".
+
+### Idle penalty
+
+After ~30 s without dictation the first utterance used to cost 360–873 ms end to end (parakeet-v2 + qwen3-1.7b, live WebSocket, 4 idle cycles) against ~260–290 ms back to back. The engine now runs a short ASR and LLM warm-up on `start`, while the user is still speaking; after-idle latency is 257–375 ms, back-to-back unchanged (#14).

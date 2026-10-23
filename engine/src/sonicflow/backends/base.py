@@ -34,6 +34,9 @@ class ASRBackend(ABC):
     @abstractmethod
     def transcribe(self, audio: np.ndarray) -> str: ...
 
+    def warm(self) -> None:
+        self.transcribe(np.zeros(self.sample_rate // 2, dtype=np.float32))
+
     def stream(self) -> ASRStream:
         return ASRStream(self)
 
@@ -48,6 +51,9 @@ class CleanupBackend(ABC):
     name: str
 
     def load(self) -> None:
+        pass
+
+    def warm(self) -> None:
         pass
 
     @abstractmethod
