@@ -11,6 +11,7 @@
   - [x] Local LLM cleanup (#10) — qwen3-1.7b default (~150 ms per rewrite, 5.7% clean WER); qwen3-4b for quality (~300 ms, 5.1%)
 - [ ] v0.3 Rolling cleanup during speech (self-correction across pauses)
 - [ ] v0.4 macOS client: menu bar, hold-to-talk + toggle hotkey, paste into the focused app, latency HUD
+  - [x] Terminal mic client, hold Option to talk (#13)
 - [ ] v0.5 Engine as a launchd daemon; optional LAN bind so the Mac Studio serves the laptop
 
 ## v1 — Wispr Flow parity and beyond
