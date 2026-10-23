@@ -10,8 +10,20 @@ class PassthroughCleanup(CleanupBackend):
         return text
 
 
+def _parakeet(name: str, repo_id: str) -> Callable[[], ASRBackend]:
+    def factory() -> ASRBackend:
+        from sonicflow.backends.parakeet import ParakeetASR
+
+        return ParakeetASR(name, repo_id)
+
+    return factory
+
+
 # Factories import their heavy dependencies lazily so only the selected backend pays load cost.
-ASR_BACKENDS: dict[str, Callable[[], ASRBackend]] = {}
+ASR_BACKENDS: dict[str, Callable[[], ASRBackend]] = {
+    "parakeet-v2": _parakeet("parakeet-v2", "mlx-community/parakeet-tdt-0.6b-v2"),
+    "parakeet-v3": _parakeet("parakeet-v3", "mlx-community/parakeet-tdt-0.6b-v3"),
+}
 
 CLEANUP_BACKENDS: dict[str, Callable[[], CleanupBackend]] = {
     "none": PassthroughCleanup,

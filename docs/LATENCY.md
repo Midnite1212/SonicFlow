@@ -27,4 +27,7 @@ Accuracy floor: corpus WER (raw vs spoken) ≤ 5% on the synthetic corpus; re-ba
 
 | Date | Machine | ASR | Cleanup | release→text p50 / p95 | WER raw | WER clean |
 |---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — |
+| 2026-10-23 | Apple M3 Pro | parakeet-v2 | none | 110–111 / 181–213 ms | 7.1% | — |
+| 2026-10-23 | Apple M3 Pro | parakeet-v3 | none | 115–125 / 195–217 ms | 8.2% | — |
+
+Ranges span two runs with warm models; load is ~1.2 s once cached. Synthetic-corpus WER over-counts number and compound formatting ("ten thirty" vs "10.30", "standup" vs "stand up"), so the absolute figures are pessimistic; the v2/v3 gap is real ("write path" → "right path" in both, extra misses in v3).
