@@ -1,6 +1,7 @@
 from collections.abc import Callable
 
 from sonicflow.backends.base import ASRBackend, CleanupBackend, CleanupContext
+from sonicflow.backends.rules import RulesCleanup
 
 
 class PassthroughCleanup(CleanupBackend):
@@ -37,6 +38,7 @@ ASR_BACKENDS: dict[str, Callable[[], ASRBackend]] = {
 
 CLEANUP_BACKENDS: dict[str, Callable[[], CleanupBackend]] = {
     "none": PassthroughCleanup,
+    "rules": RulesCleanup,
 }
 
 

@@ -7,6 +7,7 @@
   - [x] Parakeet TDT v2 and v3 (#3) — v2 leads on M3 Pro: ~110 ms p50, 7.1% WER
   - [x] Whisper large-v3-turbo (#7) — ~600 ms p50, 8.8% WER; too slow for the v0 default, kept as the multilingual candidate
 - [ ] v0.2 Cleanup bake-off: rule-based fast path, then local LLMs, measured on filler/correction items
+  - [x] Rule-based cleanup and LLM router (#9) — ~0 ms, clean-text WER 15.8% → 12.0%; routes only the 4 correction/ambiguous items
 - [ ] v0.3 Rolling cleanup during speech (self-correction across pauses)
 - [ ] v0.4 macOS client: menu bar, hold-to-talk + toggle hotkey, paste into the focused app, latency HUD
 - [ ] v0.5 Engine as a launchd daemon; optional LAN bind so the Mac Studio serves the laptop
