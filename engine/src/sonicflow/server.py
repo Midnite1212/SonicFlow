@@ -1,9 +1,10 @@
 import asyncio
 import json
+import logging
 import sys
 import time
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
 import numpy as np
@@ -14,6 +15,8 @@ from sonicflow.backends.base import ASRBackend, ASRStream, CleanupBackend, Clean
 from sonicflow.backends.registry import create_asr, create_cleanup
 from sonicflow.config import Settings
 
+logger = logging.getLogger(__name__)
+
 
 def pcm16_to_float32(data: bytes) -> np.ndarray:
     return np.frombuffer(data, dtype="<i2").astype(np.float32) / 32768.0
@@ -21,6 +24,11 @@ def pcm16_to_float32(data: bytes) -> np.ndarray:
 
 def elapsed_ms(start: float, end: float) -> float:
     return round((end - start) * 1000, 1)
+
+
+def _log_failure(future: Future) -> None:
+    if (error := future.exception()) is not None:
+        logger.warning("warm-up failed: %r", error)
 
 
 class Engine:
@@ -32,6 +40,15 @@ class Engine:
 
     async def run[T](self, fn: Callable[..., T], *args: object) -> T:
         return await asyncio.get_running_loop().run_in_executor(self._executor, fn, *args)
+
+    def warm_in_background(self) -> None:
+        """Wakes the GPU and pages model weights back in while the user is still speaking."""
+        future = self._executor.submit(self._warm)
+        future.add_done_callback(_log_failure)
+
+    def _warm(self) -> None:
+        self.asr.warm()
+        self.cleanup.warm()
 
     def shutdown(self) -> None:
         self._executor.shutdown(wait=True)
@@ -81,6 +98,7 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
                 match event.get("type"):
                     case "start":
                         stream = await engine.run(asr.stream)
+                        engine.warm_in_background()
                         context = CleanupContext(
                             app_bundle_id=event.get("app"),
                             dictionary=tuple(event.get("dictionary", ())),

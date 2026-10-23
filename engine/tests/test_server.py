@@ -34,6 +34,7 @@ def test_dictate_returns_final_with_timings(fake_asr):
     assert final["type"] == "final"
     assert final["raw"] == final["text"] == "heard 3200 samples"
     assert set(final["timings"]) == {"asr_finalize_ms", "cleanup_ms", "total_ms"}
+    assert fake_asr.warm_count == 1
 
 
 def test_audio_before_start_is_an_error(fake_asr):

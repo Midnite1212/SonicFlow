@@ -75,6 +75,11 @@ class LLMCleanup(CleanupBackend):
 
         self._rewrite("Send it Friday, no wait, Thursday.")
 
+    def warm(self) -> None:
+        logits = self._model(mx.array(self._encode(self._suffix)[:1])[None], cache=self._cache)
+        mx.eval(logits)
+        trim_prompt_cache(self._cache, self._cache[0].offset - self._prefix_len)
+
     def _encode(self, text: str) -> list[int]:
         return self._tokenizer.encode(text, add_special_tokens=False)
 

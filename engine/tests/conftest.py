@@ -9,10 +9,14 @@ class FakeASR(ASRBackend):
 
     def __init__(self) -> None:
         self.loaded = False
+        self.warm_count = 0
         self.transcribed_samples = 0
 
     def load(self) -> None:
         self.loaded = True
+
+    def warm(self) -> None:
+        self.warm_count += 1
 
     def transcribe(self, audio: np.ndarray) -> str:
         self.transcribed_samples = len(audio)
