@@ -34,6 +34,8 @@ Accuracy floor: corpus WER (raw vs spoken) ≤ 5% on the synthetic corpus; re-ba
 | 2026-10-23 | Apple M3 Pro | parakeet-v2 | rules | 107–115 / 182–186 ms | 7.1% | 12.0% |
 | 2026-10-23 | Apple M3 Pro | parakeet-v2 | qwen3-1.7b | 112–114 / 275–303 ms | 7.1% | 5.7% |
 | 2026-10-23 | Apple M3 Pro | parakeet-v2 | qwen3-4b | 127–128 / 459–469 ms | 7.1% | 5.1% |
+| 2026-10-24 | Apple M3 Pro | parakeet-v2 | qwen3-1.7b (prompt v2, 20 items) | 20 items, 60% routed to LLM: cleanup p50/p95 131 / 167 ms | — | 5.3% (was 7.7%) |
+| 2026-10-24 | Apple M3 Pro | parakeet-v2 | qwen3-4b (prompt v2, 20 items) | 372 / 473 ms | — | 3.4% (was 3.8%) |
 
 Ranges span two runs with warm models; load is ~1.2 s once cached. Synthetic-corpus WER over-counts number and compound formatting ("ten thirty" vs "10.30", "standup" vs "stand up"), so the absolute figures are pessimistic; the v2/v3 gap is real ("write path" → "right path" in both, extra misses in v3). Whisper pads every input to a 30 s window, so its cost is ~580 ms even for a 2 s clip; it drops some fillers on its own and formats identifiers and sentences better, but misses the raw budget.
 
@@ -46,3 +48,7 @@ After ~30 s without dictation the first utterance used to cost 360–873 ms end 
 ### Background service overhead
 
 The same deployed engine answers ~20–30 ms slower on short clips under launchd (140–169 ms) than started from a terminal (118–137 ms); LLM-routed clips are within noise. Raising the inference and event-loop threads to user-interactive QoS made no measurable difference, so it was not kept (#17).
+
+### Cleanup prompt v2
+
+The 20-item corpus adds corrections with leading words and literal uses of "like" / "you know". Before the prompt change, qwen3-1.7b answered a dictated question ("Do you know when the release is planned?" → "The release is planned for next week."). Prompt v2 says the text is never addressed to the model and keeps every word outside the retracted span, and `accept_rewrite` rejects rewrites with more than ~20% words that were never spoken. With it, qwen3-4b gets every item right; qwen3-1.7b still keeps a retracted name ("Please call Sam") and a filler "like", so 4B is the default (#23).
