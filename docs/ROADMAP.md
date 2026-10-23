@@ -4,6 +4,7 @@
 
 - [x] v0.0 Groundwork: protocol, backend interfaces, server, bench harness, corpus
 - [ ] v0.1 ASR bake-off: add candidates one at a time, bench on M3 Pro and M4 Max, pick a default
+  - [x] Parakeet TDT v2 and v3 (#3) — v2 leads on M3 Pro: ~110 ms p50, 7.1% WER
 - [ ] v0.2 Cleanup bake-off: rule-based fast path, then local LLMs, measured on filler/correction items
 - [ ] v0.3 Rolling cleanup during speech (self-correction across pauses)
 - [ ] v0.4 macOS client: menu bar, hold-to-talk + toggle hotkey, paste into the focused app, latency HUD
