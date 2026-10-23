@@ -28,6 +28,7 @@ SONICFLOW_ASR=<backend> uv run sonicflow   # ws://127.0.0.1:8765/v1/dictate
 ## Model credits
 
 - [Parakeet TDT 0.6B](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) by NVIDIA, CC-BY-4.0, run via [parakeet-mlx](https://github.com/senstella/parakeet-mlx)
+- [Whisper large-v3-turbo](https://huggingface.co/openai/whisper-large-v3-turbo) by OpenAI, MIT, run via [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
 
 ## Docs
 

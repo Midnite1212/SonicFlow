@@ -19,6 +19,9 @@ sonicflow-bench = "sonicflow.bench.cli:main"
 parakeet = [
     "parakeet-mlx>=0.5.3",
 ]
+whisper = [
+    "mlx-whisper>=0.4.3",
+]
 
 [dependency-groups]
 dev = [
