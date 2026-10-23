@@ -19,6 +19,8 @@ uv run pytest                             # tests
 uv run ruff check . && uv run ruff format --check .
 uv run sonicflow-bench --asr <name> [--cleanup <name>] [--realtime] [--baseline <json>]
 SONICFLOW_ASR=<name> uv run sonicflow      # serve on 127.0.0.1:8765
+uv run sonicflow-service install|status|restart|uninstall   # background LaunchAgent
+uv run sonicflow-mic                        # hold Option to dictate
 ```
 
 ## Guardrails

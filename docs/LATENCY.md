@@ -42,3 +42,7 @@ LLM cleanup only runs on the 4 items `needs_llm()` flags, so its cost shows at p
 ### Idle penalty
 
 After ~30 s without dictation the first utterance used to cost 360–873 ms end to end (parakeet-v2 + qwen3-1.7b, live WebSocket, 4 idle cycles) against ~260–290 ms back to back. The engine now runs a short ASR and LLM warm-up on `start`, while the user is still speaking; after-idle latency is 257–375 ms, back-to-back unchanged (#14).
+
+### Background service overhead
+
+The same deployed engine answers ~20–30 ms slower on short clips under launchd (140–169 ms) than started from a terminal (118–137 ms); LLM-routed clips are within noise. Raising the inference and event-loop threads to user-interactive QoS made no measurable difference, so it was not kept (#17).
