@@ -5,6 +5,15 @@ One WebSocket session per client; one utterance at a time per session.
 **Endpoint:** `ws://127.0.0.1:8765/v1/dictate`
 **Health:** `GET /health` → `{"status": "ok", "asr": "<name>", "cleanup": "<name>"}`
 
+## Backends
+
+| Request | Response |
+|---|---|
+| `GET /v1/backends` | `{"asr": {"active": "<name>", "available": [...]}, "cleanup": {...}}` |
+| `POST /v1/config` with `{"asr": "<name>"?, "cleanup": "<name>"?}` | Health body once the new backends are loaded; `400` for an unknown name, `500` if loading fails (the previous backends stay active) |
+
+The choice is saved to `~/Library/Application Support/SonicFlow/config.json` and used on the next start; `SONICFLOW_ASR` / `SONICFLOW_CLEANUP` override it.
+
 ## Client → server
 
 | Frame | Shape | Notes |

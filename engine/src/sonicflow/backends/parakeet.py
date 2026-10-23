@@ -16,6 +16,10 @@ class ParakeetASR(ASRBackend):
         self._model = from_pretrained(self.repo_id)
         self.transcribe(np.zeros(self.sample_rate, dtype=np.float32))
 
+    def unload(self) -> None:
+        self._model = None
+        mx.clear_cache()
+
     def transcribe(self, audio: np.ndarray) -> str:
         assert self._model is not None, "load() must run before transcribe()"
         config = self._model.preprocessor_config

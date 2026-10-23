@@ -10,7 +10,7 @@ import urllib.request
 from pathlib import Path
 
 from sonicflow.backends.registry import ASR_BACKENDS, CLEANUP_BACKENDS
-from sonicflow.config import Settings
+from sonicflow.config import Settings, load_backend_choice, save_backend_choice
 
 LABEL = "com.sonicflow.engine"
 PLIST_PATH = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
@@ -22,14 +22,13 @@ ENGINE_SOURCE = Path(__file__).resolve().parents[2]
 BACKEND_EXTRAS = ("parakeet", "whisper", "llm")
 
 
-def build_plist(program: Path, asr: str, cleanup: str, log_dir: Path) -> dict:
+def build_plist(program: Path, log_dir: Path) -> dict:
     return {
         "Label": LABEL,
         "ProgramArguments": [str(program)],
         "WorkingDirectory": str(program.parents[2]),
+        # Backends come from config.json so the app can switch them without reinstalling.
         "EnvironmentVariables": {
-            "SONICFLOW_ASR": asr,
-            "SONICFLOW_CLEANUP": cleanup,
             # Models come from the local cache only; the engine never reaches the network.
             "HF_HUB_OFFLINE": "1",
         },
@@ -124,7 +123,8 @@ def install(asr: str, cleanup: str, port: int) -> None:
     program = deploy_engine()
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     PLIST_PATH.parent.mkdir(parents=True, exist_ok=True)
-    PLIST_PATH.write_bytes(plistlib.dumps(build_plist(program, asr, cleanup, LOG_DIR)))
+    save_backend_choice(asr, cleanup)
+    PLIST_PATH.write_bytes(plistlib.dumps(build_plist(program, LOG_DIR)))
     launchctl("bootstrap", domain(), str(PLIST_PATH))
 
     print(f"installed {PLIST_PATH}; waiting for models to load…")
@@ -159,8 +159,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Manage the SonicFlow background engine")
     commands = parser.add_subparsers(dest="command", required=True)
     install_parser = commands.add_parser("install", help="install and start at login")
-    install_parser.add_argument("--asr", default="parakeet-v2")
-    install_parser.add_argument("--cleanup", default="qwen3-4b")
+    install_parser.add_argument("--asr", help="default: saved choice, else parakeet-v2")
+    install_parser.add_argument("--cleanup", help="default: saved choice, else qwen3-4b")
     commands.add_parser("uninstall", help="stop and remove from login")
     commands.add_parser("restart", help="restart the engine")
     commands.add_parser("status", help="show agent and engine state")
@@ -168,7 +168,10 @@ def main() -> None:
 
     match args.command:
         case "install":
-            install(args.asr, args.cleanup, port)
+            saved = load_backend_choice()
+            asr = args.asr or saved.get("asr", "parakeet-v2")
+            cleanup = args.cleanup or saved.get("cleanup", "qwen3-4b")
+            install(asr, cleanup, port)
         case "uninstall":
             uninstall()
         case "restart":

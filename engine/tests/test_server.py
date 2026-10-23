@@ -1,7 +1,10 @@
 import numpy as np
+import pytest
+from conftest import FakeASR
 from fastapi.testclient import TestClient
 
-from sonicflow.backends.registry import PassthroughCleanup
+from sonicflow.backends.registry import ASR_BACKENDS, PassthroughCleanup
+from sonicflow.config import load_backend_choice
 from sonicflow.server import create_app, pcm16_to_float32
 
 
@@ -44,3 +47,50 @@ def test_audio_before_start_is_an_error(fake_asr):
     ):
         ws.send_bytes(pcm16(160))
         assert ws.receive_json()["type"] == "error"
+
+
+class FailingASR(FakeASR):
+    name = "broken"
+
+    def load(self) -> None:
+        raise RuntimeError("weights missing")
+
+
+@pytest.fixture
+def switchable(fake_asr, tmp_path, monkeypatch):
+    monkeypatch.setenv("SONICFLOW_CONFIG", str(tmp_path / "config.json"))
+    monkeypatch.setitem(ASR_BACKENDS, "fake", FakeASR)
+    monkeypatch.setitem(ASR_BACKENDS, "broken", FailingASR)
+    return TestClient(create_app(fake_asr, PassthroughCleanup()))
+
+
+def test_backends_lists_active_and_available(switchable):
+    with switchable as client:
+        listing = client.get("/v1/backends").json()
+    assert listing["asr"]["active"] == "fake"
+    assert {"fake", "broken"} <= set(listing["asr"]["available"])
+    assert listing["cleanup"]["active"] == "none"
+
+
+def test_config_switches_cleanup_and_saves_choice(switchable, tmp_path):
+    with switchable as client:
+        response = client.post("/v1/config", json={"cleanup": "rules"})
+        assert response.json()["cleanup"] == "rules"
+        with client.websocket_connect("/v1/dictate") as ws:
+            ws.send_json({"type": "start"})
+            ws.send_bytes(pcm16(1600))
+            ws.send_json({"type": "stop"})
+            assert ws.receive_json()["text"] == "Heard 1600 samples."
+    assert load_backend_choice() == {"asr": "fake", "cleanup": "rules"}
+
+
+def test_failed_load_keeps_current_backend(switchable):
+    with switchable as client:
+        response = client.post("/v1/config", json={"asr": "broken"})
+        assert response.status_code == 500
+        assert client.get("/health").json()["asr"] == "fake"
+
+
+def test_unknown_backend_is_rejected(switchable):
+    with switchable as client:
+        assert client.post("/v1/config", json={"asr": "nope"}).status_code == 400

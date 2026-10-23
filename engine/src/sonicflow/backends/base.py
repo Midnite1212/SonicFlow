@@ -37,6 +37,9 @@ class ASRBackend(ABC):
     def warm(self) -> None:
         self.transcribe(np.zeros(self.sample_rate // 2, dtype=np.float32))
 
+    def unload(self) -> None:
+        pass
+
     def stream(self) -> ASRStream:
         return ASRStream(self)
 
@@ -54,6 +57,9 @@ class CleanupBackend(ABC):
         pass
 
     def warm(self) -> None:
+        pass
+
+    def unload(self) -> None:
         pass
 
     @abstractmethod
