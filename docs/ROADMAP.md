@@ -14,6 +14,7 @@
   - [x] Terminal mic client, hold Option to talk (#13)
   - [x] Warm-up on hotkey press removes the idle penalty (#14)
 - [ ] v0.5 Engine as a launchd daemon; optional LAN bind so the Mac Studio serves the laptop
+  - [x] LaunchAgent with `sonicflow-service`, engine deployed to Application Support (#17)
 
 ## v1 — Wispr Flow parity and beyond
 
