@@ -30,6 +30,7 @@ final class AudioCapture {
     private var recording = false
     private var pending: [Float] = []
     private var preroll: [Float] = []
+    private var sessionPeak: Float = 0
 
     init() {
         observeConfigurationChanges()
@@ -52,11 +53,17 @@ final class AudioCapture {
     func setInputDevice(uid: String?) {
         guard uid != inputDeviceUID, !isDictating else { return }
         inputDeviceUID = uid
-        let wasRunning = isRunning
-        if wasRunning { halt() }
+        rebuild()
+    }
+
+    /// Replaces the engine; a restarted one can keep running after sleep or a device change while
+    /// delivering only silence.
+    func rebuild() {
+        let shouldRun = isRunning || keepWarm || isDictating
+        if isRunning { halt() }
         engine = AVAudioEngine()
         observeConfigurationChanges()
-        if wasRunning { try? run() }
+        if shouldRun { try? run() }
     }
 
     private func observeConfigurationChanges() {
@@ -74,19 +81,23 @@ final class AudioCapture {
         queue.sync {
             pending = preroll
             preroll.removeAll(keepingCapacity: true)
+            sessionPeak = 0
             recording = true
         }
     }
 
-    /// Ends the dictation and emits the final partial chunk before returning.
-    func stop() {
-        queue.sync {
+    /// Ends the dictation, emits the final partial chunk, and returns the loudest sample sent.
+    @discardableResult
+    func stop() -> Float {
+        let peak = queue.sync {
             recording = false
             if !pending.isEmpty { emit(pending) }
             pending.removeAll()
+            return sessionPeak
         }
         isDictating = false
         if !keepWarm { halt() }
+        return peak
     }
 
     private func run() throws {
@@ -129,9 +140,7 @@ final class AudioCapture {
     /// Device changes and sleep stop the engine and can change the input format.
     private func recover() {
         guard keepWarm || isDictating else { return }
-        engine.stop()
-        isRunning = false
-        try? run()
+        rebuild()
     }
 
     private func accept(_ samples: [Float]) {
@@ -150,6 +159,7 @@ final class AudioCapture {
     }
 
     private func emit(_ chunk: [Float]) {
+        sessionPeak = chunk.reduce(sessionPeak) { max($0, abs($1)) }
         chunk.withUnsafeBufferPointer { samples in
             onChunk?(PCM.int16Data(from: samples))
             onLevel?(PCM.level(of: samples))
