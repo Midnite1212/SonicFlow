@@ -20,13 +20,14 @@ uv run ruff check . && uv run ruff format --check .
 uv run sonicflow-bench --asr <name> [--cleanup <name>] [--realtime] [--baseline <json>]
 SONICFLOW_ASR=<name> uv run sonicflow      # serve on 127.0.0.1:8765
 uv run sonicflow-service install|status|restart|uninstall   # background LaunchAgent
+uv run sonicflow-models list|download <id>|remove <id>   # model library
 uv run sonicflow-mic                        # hold Option to dictate
 ```
 
 ## Guardrails
 
 1. **Latency is a test.** Any change touching `server.py`, `backends/`, or a backend's settings runs `sonicflow-bench` against the previous result for the same machine with `--baseline`. A p50 release→text regression over 10% blocks the change unless the change is explicitly an accuracy trade-off recorded in an ADR.
-2. **Offline by default.** The engine makes no network calls at runtime. Model downloads happen only in a backend's `load()` and only on first use. Any cloud fallback is opt-in and off by default.
+2. **Offline by default.** Loading and dictation never touch the network: backends resolve model files through `models.local_path`, which never downloads. The only network calls are ones the user starts (downloading a model, adding a Hugging Face repo), off the inference thread. Any cloud fallback is opt-in and off by default. See ADR 0005.
 3. **Dictated content is private.** Never log, print, persist, or put in test fixtures any transcript or audio from real use. Logs carry timings and sizes only. Real recordings live in `bench/corpus/personal/` (gitignored) and are never committed. The app's history is the one exception: it lives in memory unless the user turns on **Save history**, which writes it to Application Support (mode 0600) and prunes it by the chosen retention. Usage stats on disk hold counts only, never text.
 4. **Bind to loopback.** The server defaults to `127.0.0.1`. Binding to another interface is a deliberate config change, never a default.
 5. **Backends stay behind the protocol.** New ASR or cleanup models implement `ASRBackend` / `CleanupBackend`, register a lazy factory in `registry.py`, and import their heavy dependencies inside the factory or `load()`. No backend-specific branches in `server.py` or the bench.

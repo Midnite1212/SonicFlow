@@ -13,8 +13,11 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from sonicflow.backends.base import ASRBackend, ASRStream, CleanupBackend, CleanupContext
-from sonicflow.backends.registry import ASR_BACKENDS, CLEANUP_BACKENDS, create_asr, create_cleanup
+from sonicflow.backends.registry import available, create_asr, create_cleanup
 from sonicflow.config import Settings, save_backend_choice
+from sonicflow.downloads import Downloads
+from sonicflow.model_routes import model_router
+from sonicflow.models import ModelNotDownloaded
 from sonicflow.style import apply_style
 from sonicflow.vocabulary import Vocabulary, common_words
 
@@ -97,9 +100,12 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
         await engine.run(cleanup.load)
         await engine.run(common_words)
         yield
+        downloads.shutdown()
         engine.shutdown()
 
+    downloads = Downloads()
     app = FastAPI(lifespan=lifespan)
+    app.include_router(model_router(engine, downloads))
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -108,8 +114,8 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
     @app.get("/v1/backends")
     def backends() -> dict[str, dict]:
         return {
-            "asr": {"active": engine.asr.name, "available": sorted(ASR_BACKENDS)},
-            "cleanup": {"active": engine.cleanup.name, "available": sorted(CLEANUP_BACKENDS)},
+            "asr": {"active": engine.asr.name, "available": available("asr")},
+            "cleanup": {"active": engine.cleanup.name, "available": available("cleanup")},
         }
 
     @app.post("/v1/config")
@@ -118,6 +124,8 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
             await engine.switch(choice)
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from None
+        except ModelNotDownloaded as error:
+            raise HTTPException(status_code=409, detail=f"{error}; download it first") from None
         except Exception as error:
             logger.warning("backend load failed: %r", error)
             raise HTTPException(status_code=500, detail=f"failed to load: {error}") from None
