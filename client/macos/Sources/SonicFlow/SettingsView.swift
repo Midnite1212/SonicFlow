@@ -101,8 +101,9 @@ struct SettingsView: View {
                 Seam()
                 SettingRow(
                     "Keep microphone ready",
-                    hint: "Starts instantly and keeps the moment before you press the hotkey. macOS shows "
-                        + "the mic indicator while SonicFlow runs; audio outside a dictation is never sent."
+                    hint: "Keeps the moment before you press the hotkey and skips the mic's start-up delay "
+                        + "(up to 0.2 s on some USB mics). macOS shows the mic indicator the whole time; "
+                        + "audio outside a dictation is never sent."
                 ) {
                     Toggle("Keep microphone ready", isOn: $settings.keepMicrophoneReady)
                         .toggleStyle(.switch).labelsHidden()

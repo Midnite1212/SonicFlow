@@ -4,9 +4,10 @@ import SonicFlowCore
 
 /// Captures the default mic as 16 kHz mono PCM16 in 100 ms chunks.
 ///
-/// When `keepWarm` is on the input stays running and the last 200 ms are kept in memory, so a
-/// dictation starts instantly and includes the moment before the key press; nothing outside a
-/// dictation is ever sent. When off, the mic runs only while dictating.
+/// The mic runs only while dictating: the engine stays armed (tap installed, resources prepared) so
+/// the input starts as fast as the device allows. When `keepWarm` is on the input stays running and
+/// the last 200 ms are kept in memory, so a dictation includes the moment before the key press;
+/// nothing outside a dictation is ever sent.
 final class AudioCapture {
     enum CaptureError: Error {
         case unsupportedFormat
@@ -25,6 +26,7 @@ final class AudioCapture {
     private let outputFormat = AVAudioFormat(
         commonFormat: .pcmFormatFloat32, sampleRate: PCM.sampleRate, channels: 1, interleaved: false
     )!
+    private var isArmed = false
     private var isRunning = false
     private var isDictating = false
     private var recording = false
@@ -36,7 +38,7 @@ final class AudioCapture {
         observeConfigurationChanges()
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.recover() }
+        ) { [weak self] _ in self?.rebuild() }
     }
 
     func setKeepWarm(_ warm: Bool) {
@@ -44,7 +46,9 @@ final class AudioCapture {
         if warm, !isRunning {
             try? run()
         } else if !warm, isRunning, !isDictating {
-            halt()
+            idle()
+        } else if !isArmed {
+            try? arm()
         }
     }
 
@@ -59,11 +63,17 @@ final class AudioCapture {
     /// Replaces the engine; a restarted one can keep running after sleep or a device change while
     /// delivering only silence.
     func rebuild() {
+        rearm(freshEngine: true)
+    }
+
+    private func rearm(freshEngine: Bool) {
         let shouldRun = isRunning || keepWarm || isDictating
-        if isRunning { halt() }
-        engine = AVAudioEngine()
-        observeConfigurationChanges()
-        if shouldRun { try? run() }
+        if isArmed { disarm() }
+        if freshEngine {
+            engine = AVAudioEngine()
+            observeConfigurationChanges()
+        }
+        if shouldRun { try? run() } else { try? arm() }
     }
 
     private func observeConfigurationChanges() {
@@ -96,19 +106,30 @@ final class AudioCapture {
             return sessionPeak
         }
         isDictating = false
-        if !keepWarm { halt() }
+        if !keepWarm { idle() }
         return peak
     }
 
-    private func run() throws {
+    /// Selects the device, installs the tap, and allocates the engine without starting the input,
+    /// so the mic stays off until `run()` and then starts quickly.
+    private func arm() throws {
+        guard !isArmed else { return }
         let input = engine.inputNode
         if let unit = input.audioUnit,
             var device = inputDeviceUID.flatMap(AudioDevices.deviceID(forUID:))
         {
-            AudioUnitSetProperty(
-                unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0,
-                &device, UInt32(MemoryLayout<AudioDeviceID>.size)
+            // Setting the device posts a configuration change, so it is only set when it differs.
+            var current = AudioDeviceID(0)
+            var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+            AudioUnitGetProperty(
+                unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &current, &size
             )
+            if current != device {
+                AudioUnitSetProperty(
+                    unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0,
+                    &device, size
+                )
+            }
         }
         let inputFormat = input.outputFormat(forBus: 0)
         guard
@@ -121,26 +142,40 @@ final class AudioCapture {
             guard let self, let samples = self.convert(buffer, with: converter) else { return }
             self.queue.async { self.accept(samples) }
         }
+        engine.prepare()
+        isArmed = true
+    }
+
+    private func run() throws {
+        try arm()
         do {
             try engine.start()
         } catch {
-            input.removeTap(onBus: 0)
+            disarm()
             throw error
         }
         isRunning = true
     }
 
-    private func halt() {
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
+    /// Stops the input but keeps the engine armed for the next `run()`.
+    private func idle() {
+        engine.pause()
         isRunning = false
         queue.sync { preroll.removeAll() }
     }
 
-    /// Device changes and sleep stop the engine and can change the input format.
+    private func disarm() {
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+        isArmed = false
+        isRunning = false
+        queue.sync { preroll.removeAll() }
+    }
+
+    /// Device changes stop the engine and can change the input format; the same engine is re-armed,
+    /// since a fresh one would set the device again and post another change.
     private func recover() {
-        guard keepWarm || isDictating else { return }
-        rebuild()
+        rearm(freshEngine: false)
     }
 
     private func accept(_ samples: [Float]) {

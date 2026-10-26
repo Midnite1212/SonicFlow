@@ -43,7 +43,7 @@ final class AppSettings {
         hotkey = defaults.string(forKey: "hotkey").flatMap(Hotkey.init(rawValue:)) ?? .option
         talkMode = defaults.string(forKey: "talkMode").flatMap(TalkMode.init(rawValue:)) ?? .hold
         inputDeviceUID = defaults.string(forKey: "inputDeviceUID")
-        keepMicrophoneReady = defaults.object(forKey: "keepMicrophoneReady") as? Bool ?? true
+        keepMicrophoneReady = defaults.bool(forKey: "keepMicrophoneReady")
         saveHistory = defaults.bool(forKey: "saveHistory")
         historyRetention =
             defaults.string(forKey: "historyRetention").flatMap(HistoryRetention.init(rawValue:)) ?? .week
