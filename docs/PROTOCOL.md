@@ -20,7 +20,7 @@ The choice is saved to `~/Library/Application Support/SonicFlow/config.json` and
 |---|---|---|
 | text | `{"type": "start", "app": "<bundle id>?", "style": "<style>"?, "dictionary": [...]?, "snippets": [...]?}` | Opens an utterance |
 | binary | PCM16 LE, mono, 16 kHz | Any chunk size; 100 ms (3200 bytes) recommended |
-| text | `{"type": "stop"}` | Hotkey released; finalize now |
+| text | `{"type": "stop", "selection": "..."?}` | Hotkey released; finalize now. With `selection`, the utterance is a command (see below) |
 
 ## Server → client
 
@@ -31,6 +31,10 @@ The choice is saved to `~/Library/Application Support/SonicFlow/config.json` and
 | `{"type": "error", "message": "..."}` | Protocol misuse; session stays open |
 
 `raw` is the ASR output; `text` is what the client pastes. `timings` are measured from receipt of `stop`.
+
+## Command mode
+
+A `stop` with a non-blank `selection` treats the transcript as an instruction ("make it shorter") and the `final` `text` is `selection` rewritten by the cleanup model; the client pastes it over the selection. Errors: `"no instruction heard"` for an empty transcript, and `"command mode needs an LLM cleanup model, not '<name>'"` when cleanup is `none` or `rules`.
 
 ## Styles
 

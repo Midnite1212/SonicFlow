@@ -51,6 +51,8 @@ final class DictationController {
     @ObservationIgnored private let pill = PillController()
     @ObservationIgnored private var hotkey: HotkeyMonitor?
     @ObservationIgnored private var connected = false
+    @ObservationIgnored private var commandRequested = false
+    @ObservationIgnored private var selection: Task<String?, Never>?
     @ObservationIgnored private var startedAt: TimeInterval = 0
     @ObservationIgnored private var releasedAt: TimeInterval = 0
     @ObservationIgnored private var permissionTimer: Timer?
@@ -147,11 +149,17 @@ final class DictationController {
     }
 
     private func handle(_ input: HotkeyMonitor.Input) {
+        if case .command = input {
+            requestCommand()
+            return
+        }
+        if case .other = input { commandRequested = false }
         let event: TalkEvent? =
             switch input {
             case let .hotkeyDown(time): gesture.hotkeyDown(at: time)
             case let .hotkeyUp(time): gesture.hotkeyUp(at: time)
             case .escape: gesture.escape()
+            case .command: nil
             case .other: gesture.otherInput()
             }
         switch event {
@@ -194,10 +202,27 @@ final class DictationController {
         state = .listening
         NSSound(named: "Tink")?.play()
         pill.show()
+        if commandRequested { requestCommand() }
+    }
+
+    /// Shift with the hotkey; for tap-to-toggle it can come before the dictation starts.
+    private func requestCommand() {
+        guard state == .listening else {
+            commandRequested = true
+            return
+        }
+        commandRequested = false
+        guard selection == nil else { return }
+        pill.model.command = true
+        selection = Task { await Selection.read() }
+        Log.event("command mode")
     }
 
     private func endDictation(deliver: Bool, reason: String?) {
         guard state == .listening else { return }
+        let selection = self.selection
+        self.selection = nil
+        commandRequested = false
         let peak = audio.stop()
         releasedAt = ProcessInfo.processInfo.systemUptime
         var deliver = deliver
@@ -218,12 +243,22 @@ final class DictationController {
         }
         state = .processing
         pill.model.phase = .processing
-        engine.finish { [weak self] message in
-            Task { @MainActor in self?.deliver(message) }
+        guard let selection else {
+            engine.finish { [weak self] message in
+                Task { @MainActor in self?.deliver(message, command: false) }
+            }
+            return
+        }
+        Task { [weak self, engine] in
+            let selected = await selection.value.flatMap { $0.isEmpty ? nil : $0 }
+            if selected == nil { Log.event("command mode: nothing selected, dictating instead") }
+            engine.finish(selection: selected) { [weak self] message in
+                Task { @MainActor in self?.deliver(message, command: selected != nil) }
+            }
         }
     }
 
-    private func deliver(_ message: ServerMessage) {
+    private func deliver(_ message: ServerMessage, command: Bool) {
         pill.hide()
         state = connected ? .idle : .offline
         switch message {
@@ -233,14 +268,17 @@ final class DictationController {
             if !text.isEmpty {
                 let app = NSWorkspace.shared.frontmostApplication?.localizedName
                 history.record(text, latencyMs: latency, appName: app)
-                stats.record(
-                    words: History.wordCount(text), speakingSeconds: releasedAt - startedAt,
-                    latencyMs: latency
-                )
-                Storage.save(stats, to: Storage.statsFile)
+                // An edit's words weren't spoken, so they stay out of the speaking stats.
+                if !command {
+                    stats.record(
+                        words: History.wordCount(text), speakingSeconds: releasedAt - startedAt,
+                        latencyMs: latency
+                    )
+                    Storage.save(stats, to: Storage.statsFile)
+                }
                 if settings.saveHistory { persistHistory() }
             }
-            Log.event("dictation delivered in \(Int(latency)) ms, \(text.count) chars")
+            Log.event("\(command ? "edit" : "dictation") delivered in \(Int(latency)) ms, \(text.count) chars")
             if !text.isEmpty { Paster.paste(text) }
         case let .error(message):
             Log.event("engine error: \(message)")

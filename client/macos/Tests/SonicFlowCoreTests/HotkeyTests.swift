@@ -12,7 +12,16 @@ import Testing
 
 @Test func hotkeyWithAnotherModifierIsOther() {
     #expect(Hotkey.option.classify(keyCode: 58, flags: [.maskAlternate, .maskCommand]) == .other)
-    #expect(Hotkey.rightCommand.classify(keyCode: 54, flags: [.maskCommand, .maskShift]) == .other)
+    #expect(Hotkey.rightCommand.classify(keyCode: 54, flags: [.maskCommand, .maskControl]) == .other)
+    #expect(Hotkey.option.classify(keyCode: 56, flags: [.maskAlternate, .maskShift, .maskCommand]) == .other)
+}
+
+@Test func shiftWithHotkeyAsksForCommandInEitherOrder() {
+    #expect(Hotkey.option.classify(keyCode: 56, flags: [.maskAlternate, .maskShift]) == .command)
+    #expect(Hotkey.option.classify(keyCode: 60, flags: [.maskAlternate, .maskShift]) == .command)
+    #expect(Hotkey.option.classify(keyCode: 58, flags: [.maskAlternate, .maskShift]) == .downCommand)
+    #expect(Hotkey.option.classify(keyCode: 56, flags: .maskAlternate) == .ignored)
+    #expect(Hotkey.option.classify(keyCode: 58, flags: .maskShift) == .up)
 }
 
 @Test func rightOptionIgnoresLeftOption() {

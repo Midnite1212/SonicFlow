@@ -12,12 +12,7 @@ enum Paster {
         pasteboard.setString(text, forType: .string)
         let ours = pasteboard.changeCount
 
-        let source = CGEventSource(stateID: .combinedSessionState)
-        for keyDown in [true, false] {
-            let event = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: keyDown)
-            event?.flags = .maskCommand
-            event?.post(tap: .cghidEventTap)
-        }
+        HotkeyMonitor.post(vKeyCode, flags: .maskCommand, source: CGEventSource(stateID: .combinedSessionState))
 
         guard let previous else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

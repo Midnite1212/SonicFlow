@@ -49,3 +49,7 @@ import Testing
 @Test func startMessageWithoutAppOmitsIt() {
     #expect(StartMessage.json(app: nil, dictionary: [], snippets: []) == #"{"dictionary":[],"snippets":[],"style":"standard","type":"start"}"#)
 }
+
+@Test func stopWithSelectionEscapesText() {
+    #expect(ServerMessage.stop(selection: "say \"hi\"\n") == #"{"selection":"say \"hi\"\n","type":"stop"}"#)
+}

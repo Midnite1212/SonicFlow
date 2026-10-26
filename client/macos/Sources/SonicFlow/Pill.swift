@@ -12,11 +12,13 @@ final class PillModel {
     static let barCount = 28
 
     var phase: Phase = .listening
+    var command = false
     var levels = [Float](repeating: 0, count: barCount)
     var startedAt = Date()
 
     func reset() {
         phase = .listening
+        command = false
         levels = [Float](repeating: 0, count: Self.barCount)
         startedAt = Date()
     }
@@ -71,13 +73,20 @@ struct PillView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Circle()
-                .fill(model.phase == .listening ? Color.red : Color.secondary)
-                .frame(width: 8, height: 8)
+            if model.command {
+                Image(systemName: "wand.and.stars")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.purple)
+                    .frame(width: 12)
+            } else {
+                Circle()
+                    .fill(model.phase == .listening ? Color.red : Color.secondary)
+                    .frame(width: 8, height: 8)
+            }
             HStack(spacing: 2) {
                 ForEach(Array(model.levels.enumerated()), id: \.offset) { _, level in
                     Capsule()
-                        .fill(Color.primary.opacity(0.75))
+                        .fill(model.command ? Color.purple.opacity(0.85) : Color.primary.opacity(0.75))
                         .frame(width: 3, height: 3 + CGFloat(min(1, level.squareRoot() * 2.5)) * 19)
                 }
             }

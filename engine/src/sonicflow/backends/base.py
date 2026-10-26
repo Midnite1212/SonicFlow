@@ -64,3 +64,7 @@ class CleanupBackend(ABC):
 
     @abstractmethod
     def clean(self, text: str, context: CleanupContext) -> str: ...
+
+    def edit(self, selection: str, instruction: str) -> str:
+        """Rewrites `selection` as the spoken `instruction` asks (command mode)."""
+        raise NotImplementedError(f"command mode needs an LLM cleanup model, not {self.name!r}")
