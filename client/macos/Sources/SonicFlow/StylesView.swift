@@ -7,25 +7,25 @@ struct StylesView: View {
 
     var body: some View {
         let listed = store.styles.listed { Self.url(for: $0) != nil }
-        Form {
-            Section {
-                Picker("Default style", selection: $store.styles.defaultStyle) {
-                    ForEach(WritingStyle.allCases, id: \.self) { Text($0.title).tag($0) }
+        Group {
+            Panel("Default") {
+                SettingRow("Style for every other app", hint: "Apps listed below use their own style.") {
+                    Picker("Default style", selection: $store.styles.defaultStyle) {
+                        ForEach(WritingStyle.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .quietPicker()
                 }
-                Text("Used for every app not listed below.").font(.caption).foregroundStyle(.secondary)
             }
-
-            Section("Apps") {
+            Panel("Apps") {
                 ForEach(listed) { app in
                     HStack {
                         AppIconImage(bundleID: app.bundleID)
-                        Text(app.name)
+                        Text(app.name).foregroundStyle(Theme.text)
                         Spacer()
                         Picker(app.name, selection: binding(for: app)) {
                             ForEach(WritingStyle.allCases, id: \.self) { Text($0.title).tag($0) }
                         }
-                        .labelsHidden()
-                        .fixedSize()
+                        .quietPicker()
                         if store.styles.overrides.contains(where: { $0.bundleID == app.bundleID }) {
                             Button("Reset", systemImage: "arrow.uturn.backward") {
                                 store.styles.remove(app.bundleID)
@@ -35,24 +35,29 @@ struct StylesView: View {
                             .help("Back to the default for this app")
                         }
                     }
+                    Seam()
                 }
-                Menu("Add App") {
+                Menu("Add App…") {
                     ForEach(Self.runningApps(excluding: Set(listed.map(\.bundleID))), id: \.bundleID) { app in
                         Button(app.name) { store.styles.set(store.styles.defaultStyle, for: app) }
                     }
                 }
+                .menuStyle(.borderlessButton)
+                .tint(Theme.secondary)
                 .fixedSize()
             }
-
-            Section("Styles") {
+            Panel("Styles") {
                 ForEach(WritingStyle.allCases, id: \.self) { style in
-                    LabeledContent(style.title) {
-                        Text(style.example).foregroundStyle(.secondary)
+                    HStack {
+                        Text(style.title).foregroundStyle(Theme.text)
+                        Spacer()
+                        Text(style.example).foregroundStyle(Theme.tertiary)
                     }
+                    if style != WritingStyle.allCases.last { Seam() }
                 }
             }
         }
-        .formStyle(.grouped)
+        .panelColumn()
         .navigationTitle("Styles")
     }
 

@@ -15,3 +15,7 @@ models/
 
 client/macos/.build/
 client/macos/build/
+
+# Impeccable session artifacts (decision sketches, review captures)
+.impeccable/mocks/
+.impeccable/review/

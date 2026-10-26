@@ -10,6 +10,8 @@ struct DictionaryView: View {
                 + "Joined-up words also match when spoken apart, so SonicFlow catches \"sonic flow\". "
                 + "Add what the speech model writes instead under \"Heard as\".",
             addTitle: "Add Word",
+            emptyTitle: "No words yet",
+            emptyHint: "Add names and jargon the speech model gets wrong, like a colleague's name or your product.",
             isEmpty: store.terms.isEmpty,
             add: { store.terms.append(DictionaryTerm()) }
         ) {
@@ -36,6 +38,8 @@ struct SnippetsView: View {
             explanation: "Say a trigger phrase and SonicFlow types the text instead. A dictation that "
                 + "is only the trigger pastes the text exactly, with no cleanup.",
             addTitle: "Add Snippet",
+            emptyTitle: "No snippets yet",
+            emptyHint: "Add text you type often, like your email address or a calendar link, and a phrase to say instead.",
             isEmpty: store.snippets.isEmpty,
             add: { store.snippets.append(Snippet()) }
         ) {
@@ -58,6 +62,8 @@ struct SnippetsView: View {
 private struct VocabularyPane<Rows: View>: View {
     let explanation: String
     let addTitle: String
+    let emptyTitle: String
+    let emptyHint: String
     let isEmpty: Bool
     let add: () -> Void
     @ViewBuilder let rows: Rows
@@ -66,21 +72,25 @@ private struct VocabularyPane<Rows: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
                 Text(explanation)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button(addTitle, systemImage: "plus", action: add)
             }
-            .padding(16)
-            Divider()
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            Divider().overlay(Theme.seam)
             if isEmpty {
                 ContentUnavailableView(
-                    "Nothing here yet", systemImage: "text.badge.plus",
-                    description: Text("Click \(addTitle) to start.")
+                    emptyTitle, systemImage: "text.badge.plus", description: Text(emptyHint)
                 )
+                .foregroundStyle(Theme.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List { rows }
+                List { rows.listRowBackground(Theme.ground).listRowSeparatorTint(Theme.seam) }
+                    .scrollContentBackground(.hidden)
             }
         }
+        .paneBackground()
     }
 }
 
@@ -91,6 +101,6 @@ private struct DeleteButton: View {
         Button("Delete", systemImage: "minus.circle", action: action)
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.tertiary)
     }
 }

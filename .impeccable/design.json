@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-26T00:00:00Z",
+  "title": "Design System: SonicFlow",
+  "extensions": {
+    "platform": "macOS (SwiftUI/AppKit). Tokens live in client/macos/Sources/SonicFlow/Theme.swift; there is no web CSS. Component snippets below are visual approximations for the panel only.",
+    "colorMeta": {
+      "ground": { "role": "neutral", "displayName": "Infield Navy", "canonical": "#0F1A33", "tonalRamp": ["oklch(15.0% 0.051 264.7)", "oklch(26.4% 0.051 264.7)", "oklch(37.9% 0.051 264.7)", "oklch(49.3% 0.051 264.7)", "oklch(60.7% 0.051 264.7)", "oklch(72.1% 0.051 264.7)", "oklch(83.6% 0.051 264.7)", "oklch(95.0% 0.051 264.7)"] },
+      "board": { "role": "neutral", "displayName": "Board Navy", "canonical": "#132042", "tonalRamp": ["oklch(15.0% 0.067 266.0)", "oklch(26.4% 0.067 266.0)", "oklch(37.9% 0.067 266.0)", "oklch(49.3% 0.067 266.0)", "oklch(60.7% 0.067 266.0)", "oklch(72.1% 0.067 266.0)", "oklch(83.6% 0.067 266.0)", "oklch(95.0% 0.067 266.0)"] },
+      "panel": { "role": "neutral", "displayName": "Panel Navy", "canonical": "#18264A", "tonalRamp": ["oklch(15.0% 0.069 266.0)", "oklch(26.4% 0.069 266.0)", "oklch(37.9% 0.069 266.0)", "oklch(49.3% 0.069 266.0)", "oklch(60.7% 0.069 266.0)", "oklch(72.1% 0.069 266.0)", "oklch(83.6% 0.069 266.0)", "oklch(95.0% 0.069 266.0)"] },
+      "seam": { "role": "neutral", "displayName": "Seam", "canonical": "#26365F", "tonalRamp": ["oklch(15.0% 0.075 266.4)", "oklch(26.4% 0.075 266.4)", "oklch(37.9% 0.075 266.4)", "oklch(49.3% 0.075 266.4)", "oklch(60.7% 0.075 266.4)", "oklch(72.1% 0.075 266.4)", "oklch(83.6% 0.075 266.4)", "oklch(95.0% 0.075 266.4)"] },
+      "text": { "role": "neutral", "displayName": "Off-White", "canonical": "#E8ECF5", "tonalRamp": ["oklch(15.0% 0.013 266.7)", "oklch(26.4% 0.013 266.7)", "oklch(37.9% 0.013 266.7)", "oklch(49.3% 0.013 266.7)", "oklch(60.7% 0.013 266.7)", "oklch(72.1% 0.013 266.7)", "oklch(83.6% 0.013 266.7)", "oklch(95.0% 0.013 266.7)"] },
+      "secondary": { "role": "neutral", "displayName": "Slate", "canonical": "#AEB8D0", "tonalRamp": ["oklch(15.0% 0.036 267.6)", "oklch(26.4% 0.036 267.6)", "oklch(37.9% 0.036 267.6)", "oklch(49.3% 0.036 267.6)", "oklch(60.7% 0.036 267.6)", "oklch(72.1% 0.036 267.6)", "oklch(83.6% 0.036 267.6)", "oklch(95.0% 0.036 267.6)"] },
+      "tertiary": { "role": "neutral", "displayName": "Dim Slate", "canonical": "#8392B5", "tonalRamp": ["oklch(15.0% 0.055 266.7)", "oklch(26.4% 0.055 266.7)", "oklch(37.9% 0.055 266.7)", "oklch(49.3% 0.055 266.7)", "oklch(60.7% 0.055 266.7)", "oklch(72.1% 0.055 266.7)", "oklch(83.6% 0.055 266.7)", "oklch(95.0% 0.055 266.7)"] },
+      "cyan": { "role": "primary", "displayName": "Speed Cyan (under 200 ms)", "canonical": "#2FD3F0", "tonalRamp": ["oklch(15.0% 0.132 213.2)", "oklch(26.4% 0.132 213.2)", "oklch(37.9% 0.132 213.2)", "oklch(49.3% 0.132 213.2)", "oklch(60.7% 0.132 213.2)", "oklch(72.1% 0.132 213.2)", "oklch(83.6% 0.132 213.2)", "oklch(95.0% 0.132 213.2)"] },
+      "blue": { "role": "primary", "displayName": "Speed Blue (200-499 ms)", "canonical": "#3D6BFF", "tonalRamp": ["oklch(15.0% 0.226 266.2)", "oklch(26.4% 0.226 266.2)", "oklch(37.9% 0.226 266.2)", "oklch(49.3% 0.226 266.2)", "oklch(60.7% 0.226 266.2)", "oklch(72.1% 0.226 266.2)", "oklch(83.6% 0.226 266.2)", "oklch(95.0% 0.226 266.2)"] },
+      "violet": { "role": "primary", "displayName": "Speed Violet (500 ms and slower)", "canonical": "#8B5CF6", "tonalRamp": ["oklch(15.0% 0.219 292.7)", "oklch(26.4% 0.219 292.7)", "oklch(37.9% 0.219 292.7)", "oklch(49.3% 0.219 292.7)", "oklch(60.7% 0.219 292.7)", "oklch(72.1% 0.219 292.7)", "oklch(83.6% 0.219 292.7)", "oklch(95.0% 0.219 292.7)"] },
+      "blue-text": { "role": "primary", "displayName": "Blue Text", "canonical": "#7F9CFF", "tonalRamp": ["oklch(15.0% 0.148 270.0)", "oklch(26.4% 0.148 270.0)", "oklch(37.9% 0.148 270.0)", "oklch(49.3% 0.148 270.0)", "oklch(60.7% 0.148 270.0)", "oklch(72.1% 0.148 270.0)", "oklch(83.6% 0.148 270.0)", "oklch(95.0% 0.148 270.0)"] },
+      "violet-text": { "role": "primary", "displayName": "Violet Text", "canonical": "#B59BFA", "tonalRamp": ["oklch(15.0% 0.136 295.5)", "oklch(26.4% 0.136 295.5)", "oklch(37.9% 0.136 295.5)", "oklch(49.3% 0.136 295.5)", "oklch(60.7% 0.136 295.5)", "oklch(72.1% 0.136 295.5)", "oklch(83.6% 0.136 295.5)", "oklch(95.0% 0.136 295.5)"] },
+      "ready": { "role": "status", "displayName": "Ready Green", "canonical": "#4CC38A", "tonalRamp": ["oklch(15.0% 0.136 159.3)", "oklch(26.4% 0.136 159.3)", "oklch(37.9% 0.136 159.3)", "oklch(49.3% 0.136 159.3)", "oklch(60.7% 0.136 159.3)", "oklch(72.1% 0.136 159.3)", "oklch(83.6% 0.136 159.3)", "oklch(95.0% 0.136 159.3)"] },
+      "alert": { "role": "status", "displayName": "Alert Coral", "canonical": "#F2706A", "tonalRamp": ["oklch(15.0% 0.161 24.8)", "oklch(26.4% 0.161 24.8)", "oklch(37.9% 0.161 24.8)", "oklch(49.3% 0.161 24.8)", "oklch(60.7% 0.161 24.8)", "oklch(72.1% 0.161 24.8)", "oklch(83.6% 0.161 24.8)", "oklch(95.0% 0.161 24.8)"] }
+    },
+    "speedScale": {
+      "scaleMs": 600,
+      "budgetMs": 500,
+      "steps": [
+        { "name": "fast", "rule": "ms < 200", "fill": "cyan", "text": "cyan" },
+        { "name": "normal", "rule": "200 <= ms < 500", "fill": "blue", "text": "blue-text" },
+        { "name": "slow", "rule": "ms >= 500", "fill": "violet", "text": "violet-text" }
+      ],
+      "fillLength": "trackWidth * min(ms / 600, 1), never shorter than the stripe height",
+      "budgetTick": "1px tertiary at 500/600 of the width, stripe height + 8",
+      "breakNotch": "ms > 600: two 2px ground bars rotated 20deg, 2px apart, 16px from the right end",
+      "heights": { "hero": "12px", "pill": "6px", "onboarding": "6px", "row": "4px" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The latest release-to-text time on Home, coloured by its speed step." },
+      "headline": { "displayName": "Headline (largeTitle)", "purpose": "Onboarding welcome and done screens only." },
+      "title": { "displayName": "Title", "purpose": "Onboarding step titles and Home's empty state." },
+      "figure": { "displayName": "Figure (title2)", "purpose": "Today strip values." },
+      "body": { "displayName": "Body", "purpose": "Dictated text, setting labels, explanations." },
+      "callout": { "displayName": "Callout", "purpose": "Metadata, key/value rows, setting hints, ms figures in rows." },
+      "label": { "displayName": "Label (subheadline semibold)", "purpose": "Panel titles and History day headers." },
+      "caption": { "displayName": "Caption", "purpose": "Stripe scale labels; semibold for the Edit tag." },
+      "pill": { "displayName": "Pill", "purpose": "The pill's elapsed timer and live ms count." }
+    },
+    "shadows": [
+      { "name": "pill-window", "value": "system NSPanel window shadow (hasShadow = true)", "purpose": "The one shadow in the product: separates the floating pill from arbitrary app content. No shadows are drawn in SwiftUI." }
+    ],
+    "motion": [
+      { "name": "pill-levels", "value": "linear 0.1s", "purpose": "Input level bars while listening." },
+      { "name": "pill-live-stripe", "value": "TimelineView(.animation), every frame", "purpose": "The processing stripe grows in real time from the moment of release." },
+      { "name": "pill-timer", "value": "TimelineView(.periodic, 1s)", "purpose": "Elapsed m:ss while listening." }
+    ],
+    "exceptions": [
+      { "name": "Forced dark window", "body": "window.appearance = .darkAqua with an Infield Navy window background, and the pill forces .dark; the world is identical in either system appearance." },
+      { "name": "System-accent sidebar selection", "body": "SwiftUI tint does not reach the native sidebar, an AccentColor asset needs actool (full Xcode only; the project builds with the Command Line Tools), and a hand-built sidebar would break the native-Mac commitment." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "A console panel: one step lighter than the ground, a hairline seam, a small slate title.",
+      "html": "<section class=\"ds-panel\"><header class=\"ds-panel-title\">Engine</header><div class=\"ds-panel-body\"><div class=\"ds-status\"><i></i><b>Ready</b></div><div class=\"ds-kv\"><span>Speech</span><span>parakeet-v2</span></div><div class=\"ds-kv\"><span>Cleanup</span><span>qwen3-4b</span></div></div></section>",
+      "css": ".ds-panel{width:290px;background:#18264A;border:1px solid #26365F;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px;font-family:-apple-system,'SF Pro Text',system-ui;color:#E8ECF5}.ds-panel-title{font-size:11px;font-weight:600;color:#AEB8D0}.ds-panel-body{display:flex;flex-direction:column;gap:10px}.ds-status{display:flex;align-items:center;gap:8px;font-size:13px}.ds-status i{width:8px;height:8px;border-radius:50%;background:#4CC38A}.ds-kv{display:flex;justify-content:space-between;font-size:12px}.ds-kv span:first-child{color:#8392B5}"
+    },
+    {
+      "name": "Latency Readout",
+      "kind": "custom",
+      "refersTo": "latency-readout",
+      "description": "Home's hero: the latest time large in its speed colour, its 12px stripe on the 0-600 ms scale with the 500 ms budget tick.",
+      "html": "<div class=\"ds-hero\"><div class=\"ds-hero-fig\"><span class=\"ds-hero-num\">160</span><span class=\"ds-hero-unit\">ms</span></div><div class=\"ds-hero-stripe\"><i class=\"ds-hero-fill\" style=\"width:26.7%\"></i><i class=\"ds-hero-tick\"></i></div><div class=\"ds-hero-scale\"><span>0</span><span>500 ms budget</span></div></div>",
+      "css": ".ds-hero{width:420px;background:#18264A;border:1px solid #26365F;border-radius:10px;padding:18px;font-family:-apple-system,'SF Pro Text',system-ui;font-variant-numeric:tabular-nums}.ds-hero-fig{display:flex;align-items:baseline;gap:6px}.ds-hero-num{font-size:64px;font-weight:600;line-height:1;color:#2FD3F0}.ds-hero-unit{font-size:17px;font-weight:500;color:#AEB8D0}.ds-hero-stripe{position:relative;height:20px;margin-top:14px}.ds-hero-stripe::before{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:#26365F}.ds-hero-fill{position:absolute;left:0;top:50%;height:12px;transform:translateY(-50%);border-radius:9999px;background:#2FD3F0;transition:width .2s linear}.ds-hero-tick{position:absolute;left:83.333%;top:0;bottom:0;width:1px;background:#8392B5}.ds-hero-scale{display:flex;justify-content:space-between;width:83.333%;margin-top:4px;font-size:10px;color:#8392B5}"
+    },
+    {
+      "name": "Speed Stripe",
+      "kind": "custom",
+      "refersTo": "stripe-fast",
+      "description": "The signature: a latency as a livery stripe on the fixed 0-600 ms scale, in the three speed steps, with the break notch past 600 ms.",
+      "html": "<div class=\"ds-stripes\"><div class=\"ds-srow\"><span class=\"ds-slabel\">Fast</span><span class=\"ds-stripe\"><i class=\"ds-fill ds-fast\" style=\"width:26.7%\"></i></span><b class=\"ds-ms ds-t-fast\">160 ms</b></div><div class=\"ds-srow\"><span class=\"ds-slabel\">Normal</span><span class=\"ds-stripe\"><i class=\"ds-fill ds-normal\" style=\"width:58.7%\"></i></span><b class=\"ds-ms ds-t-normal\">352 ms</b></div><div class=\"ds-srow\"><span class=\"ds-slabel\">Slow</span><span class=\"ds-stripe\"><i class=\"ds-fill ds-slow\" style=\"width:100%\"></i><i class=\"ds-notch\" style=\"right:16px\"></i><i class=\"ds-notch\" style=\"right:12px\"></i></span><b class=\"ds-ms ds-t-slow\">1492 ms</b></div></div>",
+      "css": ".ds-stripes{width:420px;background:#18264A;border:1px solid #26365F;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:8px;font:12px -apple-system,'SF Pro Text',system-ui;font-variant-numeric:tabular-nums}.ds-srow{display:flex;align-items:center;gap:12px}.ds-slabel{width:96px;color:#AEB8D0;font-size:13px}.ds-stripe{position:relative;flex:1;height:12px}.ds-stripe::before{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:#26365F;border-radius:9999px}.ds-fill{position:absolute;left:0;top:50%;height:4px;min-width:4px;transform:translateY(-50%);border-radius:9999px}.ds-fast{background:#2FD3F0}.ds-normal{background:#3D6BFF}.ds-slow{background:#8B5CF6}.ds-notch{position:absolute;top:50%;width:2px;height:10px;background:#0F1A33;transform:translateY(-50%) rotate(20deg)}.ds-ms{width:64px;text-align:right;font-weight:400}.ds-t-fast{color:#2FD3F0}.ds-t-normal{color:#7F9CFF}.ds-t-slow{color:#B59BFA}"
+    },
+    {
+      "name": "Pill, processing",
+      "kind": "custom",
+      "refersTo": "pill",
+      "description": "The floating capsule after release: a dim dot, the stripe growing in real time, the live ms count in its speed text colour.",
+      "html": "<div class=\"ds-pill\"><span class=\"ds-pill-dot\"></span><span class=\"ds-pill-stripe\"><i style=\"width:58.7%\"></i></span><span class=\"ds-pill-ms\">352</span></div>",
+      "css": ".ds-pill{display:flex;align-items:center;gap:10px;width:230px;height:40px;box-sizing:border-box;padding:0 14px;background:rgba(15,26,51,.96);border:1px solid #26365F;border-radius:9999px;box-shadow:0 6px 18px rgba(0,0,0,.35);font:500 12px -apple-system,'SF Pro Text',system-ui;font-variant-numeric:tabular-nums}.ds-pill-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#8392B5}.ds-pill-stripe{position:relative;flex:1;height:14px}.ds-pill-stripe::before{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:#26365F}.ds-pill-stripe i{position:absolute;left:0;top:50%;height:6px;min-width:6px;transform:translateY(-50%);border-radius:9999px;background:#3D6BFF;transition:width .1s linear}.ds-pill-ms{width:34px;text-align:right;color:#7F9CFF}"
+    },
+    {
+      "name": "Pill, listening",
+      "kind": "custom",
+      "refersTo": "pill",
+      "description": "The floating capsule while the hotkey is held: a coral recording dot, 28 cyan level bars, the elapsed timer in slate.",
+      "html": "<div class=\"ds-pill-l\"><span class=\"ds-pill-l-dot\"></span><span class=\"ds-bars\"><i style=\"height:3px\"></i><i style=\"height:5px\"></i><i style=\"height:8px\"></i><i style=\"height:12px\"></i><i style=\"height:16px\"></i><i style=\"height:20px\"></i><i style=\"height:14px\"></i><i style=\"height:9px\"></i><i style=\"height:6px\"></i><i style=\"height:4px\"></i><i style=\"height:7px\"></i><i style=\"height:11px\"></i><i style=\"height:17px\"></i><i style=\"height:22px\"></i><i style=\"height:18px\"></i><i style=\"height:13px\"></i><i style=\"height:8px\"></i><i style=\"height:5px\"></i><i style=\"height:3px\"></i><i style=\"height:6px\"></i><i style=\"height:10px\"></i><i style=\"height:15px\"></i><i style=\"height:19px\"></i><i style=\"height:12px\"></i><i style=\"height:7px\"></i><i style=\"height:4px\"></i><i style=\"height:3px\"></i><i style=\"height:3px\"></i></span><span class=\"ds-pill-l-time\">0:04</span></div>",
+      "css": ".ds-pill-l{display:flex;align-items:center;gap:10px;width:230px;height:40px;box-sizing:border-box;padding:0 14px;background:rgba(15,26,51,.96);border:1px solid #26365F;border-radius:9999px;box-shadow:0 6px 18px rgba(0,0,0,.35);font:500 12px -apple-system,'SF Pro Text',system-ui;font-variant-numeric:tabular-nums}.ds-pill-l-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#F2706A}.ds-bars{flex:1;display:flex;align-items:center;gap:2px;height:22px}.ds-bars i{display:block;width:3px;border-radius:9999px;background:#2FD3F0;transition:height .1s linear}.ds-pill-l-time{width:34px;text-align:center;color:#AEB8D0}"
+    },
+    {
+      "name": "Setting Row with Quiet Picker",
+      "kind": "input",
+      "refersTo": "quiet-picker",
+      "description": "Label left, control right, optional dim hint; pickers shown as value and chevron without the bordered popup.",
+      "html": "<div class=\"ds-set\"><div class=\"ds-set-title\">Dictation</div><div class=\"ds-set-row\"><span>Hotkey</span><button class=\"ds-quiet\">Option (either)<svg width=\"9\" height=\"12\" viewBox=\"0 0 9 12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M1.5 4.5 4.5 1.5 7.5 4.5M1.5 7.5 4.5 10.5 7.5 7.5\"/></svg></button></div><div class=\"ds-set-seam\"></div><div class=\"ds-set-row\"><span>Mode</span><button class=\"ds-quiet\">Hold to talk<svg width=\"9\" height=\"12\" viewBox=\"0 0 9 12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M1.5 4.5 4.5 1.5 7.5 4.5M1.5 7.5 4.5 10.5 7.5 7.5\"/></svg></button></div><p class=\"ds-set-hint\">Hold Option while speaking. Add Shift to edit selected text by voice.</p></div>",
+      "css": ".ds-set{width:420px;background:#18264A;border:1px solid #26365F;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px;font:13px -apple-system,'SF Pro Text',system-ui;color:#E8ECF5}.ds-set-title{font-size:11px;font-weight:600;color:#AEB8D0}.ds-set-row{display:flex;justify-content:space-between;align-items:center}.ds-quiet{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:2px 4px;border-radius:5px;color:#AEB8D0;font:inherit}.ds-quiet:hover{color:#E8ECF5}.ds-quiet:focus-visible{outline:2px solid #0A84FF;outline-offset:1px}.ds-set-seam{height:1px;background:#26365F}.ds-set-hint{margin:-10px 0 0;font-size:12px;color:#8392B5}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "History's plain search field: a dim magnifier on panel navy, 7px radius, seam stroke, 28px tall.",
+      "html": "<label class=\"ds-search\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"><circle cx=\"7\" cy=\"7\" r=\"5\"/><path d=\"m11 11 3.5 3.5\"/></svg><input placeholder=\"Search history\"></label>",
+      "css": ".ds-search{display:flex;align-items:center;gap:6px;width:220px;height:28px;box-sizing:border-box;padding:0 10px;background:#18264A;border:1px solid #26365F;border-radius:7px;color:#8392B5}.ds-search input{flex:1;min-width:0;background:none;border:0;outline:none;color:#E8ECF5;font:13px -apple-system,'SF Pro Text',system-ui;caret-color:#E8ECF5}.ds-search input::placeholder{color:#8392B5}"
+    },
+    {
+      "name": "Sidebar",
+      "kind": "nav",
+      "refersTo": "sidebar",
+      "description": "Native source list on board navy with SF Symbol labels and count badges; selection keeps the system accent (recorded exception).",
+      "html": "<nav class=\"ds-side\"><a class=\"ds-side-item ds-side-on\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linejoin=\"round\"><path d=\"M2 7.5 8 2.5l6 5M3.5 6.5v7h9v-7\"/></svg>Home</a><a class=\"ds-side-item\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"><circle cx=\"8\" cy=\"8\" r=\"6\"/><path d=\"M8 4.5V8l2.5 1.5\"/></svg>History<span class=\"ds-badge\">12</span></a><a class=\"ds-side-item\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\"><circle cx=\"8\" cy=\"8\" r=\"2.5\"/><circle cx=\"8\" cy=\"8\" r=\"6\"/></svg>Settings</a></nav>",
+      "css": ".ds-side{width:200px;background:#132042;padding:10px;display:flex;flex-direction:column;gap:2px;font:13px -apple-system,'SF Pro Text',system-ui}.ds-side-item{display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;border-radius:6px;color:#E8ECF5;text-decoration:none}.ds-side-item svg{color:#AEB8D0}.ds-side-on{background:#0A84FF;color:#fff}.ds-side-on svg{color:#fff}.ds-side-item:focus-visible{outline:2px solid #0A84FF;outline-offset:1px}.ds-badge{margin-left:auto;padding:1px 7px;border-radius:9999px;background:rgba(255,255,255,.08);color:#AEB8D0;font-size:11px;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Recent Row",
+      "kind": "custom",
+      "description": "One dictation on one line: time, app, preview, 4px stripe, ms in its speed text colour; rows split by a seam.",
+      "html": "<div class=\"ds-recent\"><div class=\"ds-r\"><span class=\"ds-r-time\">9:41 AM</span><span class=\"ds-r-app\">Mail</span><span class=\"ds-r-text\">Send the draft over after lunch.</span><span class=\"ds-r-stripe\"><i style=\"width:26.7%;background:#2FD3F0\"></i></span><span class=\"ds-r-ms\" style=\"color:#2FD3F0\">160 ms</span></div><div class=\"ds-r\"><span class=\"ds-r-time\">9:38 AM</span><span class=\"ds-r-app\">Slack</span><span class=\"ds-r-text\">Sounds good, I will take the first review.</span><span class=\"ds-r-stripe\"><i style=\"width:51%;background:#3D6BFF\"></i></span><span class=\"ds-r-ms\" style=\"color:#7F9CFF\">306 ms</span></div></div>",
+      "css": ".ds-recent{width:640px;background:#18264A;border:1px solid #26365F;border-radius:10px;padding:0 18px;font:13px -apple-system,'SF Pro Text',system-ui;color:#E8ECF5}.ds-r{display:flex;align-items:center;gap:14px;padding:9px 0}.ds-r+.ds-r{border-top:1px solid #26365F}.ds-r-time{flex:none;width:66px;font-size:12px;color:#8392B5;font-variant-numeric:tabular-nums}.ds-r-app{flex:none;width:80px;font-size:12px;color:#8392B5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ds-r-text{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ds-r-stripe{position:relative;flex:none;width:96px;height:12px}.ds-r-stripe::before{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:#26365F}.ds-r-stripe i{position:absolute;left:0;top:50%;height:4px;min-width:4px;transform:translateY(-50%);border-radius:9999px}.ds-r-ms{flex:none;width:64px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Today Strip",
+      "kind": "card",
+      "refersTo": "today-strip",
+      "description": "The untitled panel variant: four equal figures split by 1x40px vertical seams.",
+      "html": "<div class=\"ds-today\"><div class=\"ds-fig\"><b>1,240</b><span>words today</span></div><i class=\"ds-vseam\"></i><div class=\"ds-fig\"><b>112 wpm</b><span>speaking, 7 days</span></div><i class=\"ds-vseam\"></i><div class=\"ds-fig\"><b>18 min</b><span>saved vs typing</span></div><i class=\"ds-vseam\"></i><div class=\"ds-fig\"><b>4 days</b><span>streak</span></div></div>",
+      "css": ".ds-today{width:640px;display:flex;align-items:center;padding:14px 0;background:#18264A;border:1px solid #26365F;border-radius:10px;font-family:-apple-system,'SF Pro Text',system-ui}.ds-fig{flex:1;display:flex;flex-direction:column;gap:2px;padding:0 18px}.ds-fig b{font-size:17px;font-weight:600;color:#E8ECF5;font-variant-numeric:tabular-nums}.ds-fig span{font-size:12px;color:#8392B5}.ds-vseam{flex:none;width:1px;height:40px;background:#26365F}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Night-Session Timing Panel",
+    "overview": "SonicFlow is a timing console at a velodrome after dark. Panels sit on an infield navy ground, one step of lightness above it and edged by a hairline seam. The surface is flat colour: no shadows, no glow, no gradients. The logo's cyan, blue and violet appear only as a speed scale. Every latency is drawn as a livery stripe, and its length is its time on one fixed scale, so any two stripes anywhere in the app compare by length.\n\nThe window is opened now and then, so its density is calm. It shows speed first, then whether the engine is ready, then what was said, and every other surface is a tidy panel away. The pill is the one surface seen dozens of times a day. It floats over other apps and never takes focus. Everything else stays native Mac: system sidebar, system controls, SF Pro, standard window chrome.\n\nThe world rejects the category default of grey or white stat cards with one blue accent, and the generic neon AI look.",
+    "keyCharacteristics": [
+      "Navy ground, panels one lightness step up, a 1px seam for every edge and divider.",
+      "Cyan, blue and violet mean speed and nothing else: under 200 ms, under 500 ms, slower.",
+      "One stripe scale everywhere: 0–600 ms, with a 500 ms budget tick.",
+      "SF Pro throughout, tabular digits for every figure.",
+      "The same dark world in both system appearances."
+    ],
+    "rules": [
+      { "name": "The One Job Rule", "body": "Cyan, blue and violet encode latency. The one other use is cyan for the pill's live input-level bars while it is listening. A speed colour on anything else is a false reading. Use status colours for state and Off-White for mode.", "section": "colors" },
+      { "name": "The Readable Twin Rule", "body": "Each speed step has a fill and a text colour. Stripes use the fill (cyan, blue, violet), and figures use the text colour (cyan, blue-text, violet-text). Never set a figure in Speed Blue or Speed Violet.", "section": "colors" },
+      { "name": "The Command Is Not Speed Rule", "body": "Command mode is shown by the wand symbol and off-white level bars, never by a speed colour.", "section": "colors" },
+      { "name": "The Tabular Figures Rule", "body": "Every number that can change or sit in a column (latencies, times of day, counts, the pill timer) uses tabular digits. Times are written as `Format.ms`: a rounded integer, a space, then \"ms\".", "section": "typography" },
+      { "name": "The Seam, Not Shadow Rule", "body": "Separate surfaces with a lightness step and a 1px Seam stroke. Draw no shadows in SwiftUI. The pill's system window shadow is the only exception.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do draw every latency as a Speed Stripe on the fixed 0–600 ms scale with the 500 ms budget, so a stripe on Home and a stripe in History compare by length.",
+      "Do colour a time by `Theme.Speed(ms:)`: under 200 ms cyan (#2FD3F0), under 500 ms blue (#3D6BFF fill, #7F9CFF text), otherwise violet (#8B5CF6 fill, #B59BFA text).",
+      "Do separate surfaces with a lightness step and a 1px Seam (#26365F) stroke.",
+      "Do set every changing or columnar number in SF Pro tabular digits.",
+      "Do keep the window in the dark world in either system appearance: `window.appearance = .darkAqua` with an Infield Navy (#0F1A33) window background. The pill forces `.dark` as well. This is a recorded exception to following the system appearance.",
+      "Do leave sidebar selection on the system accent colour. SwiftUI's tint does not reach the native sidebar, an AccentColor asset needs actool (full Xcode only, and this project builds with the Command Line Tools), and a hand-built sidebar would break the native-Mac commitment. This is a recorded exception.",
+      "Do use native macOS controls, SF Symbols and `ContentUnavailableView` before building custom chrome."
+    ],
+    "donts": [
+      "Don't use cyan, blue or violet for anything other than a time or the pill's listening level: not progress, success, selection, links or mode.",
+      "Don't set a figure in Speed Blue (#3D6BFF) or Speed Violet (#8B5CF6). Use their text twins.",
+      "Don't rescale a stripe to fit its data, or draw an over-600 ms stripe without the break notch.",
+      "Don't draw shadows, glows or gradients in SwiftUI. The only shadow is the system window shadow under the pill.",
+      "Don't use grey or white stat cards with a single blue accent, or neon glow treatments.",
+      "Don't use SF Mono for figures."
+    ]
+  }
+}

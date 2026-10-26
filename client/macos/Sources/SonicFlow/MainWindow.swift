@@ -72,9 +72,13 @@ final class MainWindow: NSObject, NSWindowDelegate {
         hosting.sizingOptions = []
         let window = NSWindow(contentViewController: hosting)
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
-        window.title = "SonicFlow"
-        window.setContentSize(NSSize(width: 860, height: 600))
-        window.contentMinSize = NSSize(width: 720, height: 480)
+        window.title = (navigation.pane ?? .home).title
+        // The window is the night-session world in either system appearance.
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.backgroundColor = Theme.groundNS
+        window.titlebarAppearsTransparent = true
+        window.setContentSize(NSSize(width: 980, height: 680))
+        window.contentMinSize = NSSize(width: 820, height: 560)
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.center()
@@ -90,15 +94,25 @@ struct RootView: View {
     @Bindable var navigation: Navigation
 
     var body: some View {
+        // Affirmative green, so switches and default buttons never borrow a speed colour.
+        content.tint(Theme.ready)
+    }
+
+    @ViewBuilder private var content: some View {
         if controller.settings.onboarded {
             NavigationSplitView {
                 List(Pane.allCases, selection: $navigation.pane) { pane in
-                    Label(pane.title, systemImage: pane.symbol).tag(pane)
+                    Label(pane.title, systemImage: pane.symbol)
+                        .badge(count(pane))
+                        .tag(pane)
                 }
-                .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 240)
+                .scrollContentBackground(.hidden)
+                .background(Theme.board)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 200, max: 240)
             } detail: {
                 switch navigation.pane ?? .home {
-                case .home: HomeView(controller: controller, navigation: navigation)
+                case .home:
+                    HomeView(controller: controller, settingsModel: settingsModel, navigation: navigation)
                 case .history: HistoryView(
                         controller: controller, settings: controller.settings, model: navigation.history
                     )
@@ -113,6 +127,15 @@ struct RootView: View {
                 controller: controller, settings: controller.settings, settingsModel: settingsModel,
                 model: navigation.onboarding
             )
+        }
+    }
+
+    private func count(_ pane: Pane) -> Int {
+        switch pane {
+        case .history: controller.history.entries.count
+        case .dictionary: controller.personalization.terms.count
+        case .snippets: controller.personalization.snippets.count
+        default: 0
         }
     }
 }

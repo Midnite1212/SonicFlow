@@ -90,3 +90,24 @@ import Testing
     #expect(totals.timeSavedSeconds() == 0)
     #expect(UsageStats.Totals().wordsPerMinute == nil)
 }
+
+@Test func percentilesSkipEditsAndOldEntries() {
+    let now = Date(timeIntervalSince1970: 1_000_000)
+    var history = History()
+    for (offset, latency) in [(0, 100.0), (0, 200), (0, 300), (0, 400), (0, 500)] {
+        history.record("x", at: now.addingTimeInterval(Double(-offset)), latencyMs: latency)
+    }
+    history.record("edit", at: now, latencyMs: 900, isEdit: true)
+    history.record("old", at: now.addingTimeInterval(-10 * 86_400), latencyMs: 5)
+    let week = now.addingTimeInterval(-7 * 86_400)
+    #expect(history.latencyPercentile(0.5, since: week) == 300)
+    #expect(history.latencyPercentile(0.95, since: week) == 500)
+    #expect(history.latencyPercentile(0.5, since: now.addingTimeInterval(1)) == nil)
+    #expect(history.entries.filter(\.isEdit).map(\.text) == ["edit"])
+}
+
+@Test func entriesSavedBeforeEditFlagStillDecode() throws {
+    let json = #"{"capacity":5,"entries":[{"id":"7598E2B3-9D6A-4C95-A54C-08D7B5236270","text":"hi","date":0,"latencyMs":120}]}"#
+    let history = try JSONDecoder().decode(History.self, from: Data(json.utf8))
+    #expect(history.entries.first?.isEdit == false)
+}
