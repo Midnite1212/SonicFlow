@@ -40,6 +40,61 @@ def test_dictate_returns_final_with_timings(fake_asr):
     assert fake_asr.warm_count == 1
 
 
+class ScriptedASR(FakeASR):
+    def __init__(self, transcript: str) -> None:
+        super().__init__()
+        self.transcript = transcript
+
+    def transcribe(self, audio: np.ndarray) -> str:
+        return self.transcript
+
+
+class RecordingCleanup(PassthroughCleanup):
+    def __init__(self) -> None:
+        self.seen: list[str] = []
+
+    def clean(self, text, context):
+        self.seen.append(text)
+        return text
+
+
+def dictate(asr, cleanup, start: dict) -> dict:
+    with (
+        TestClient(create_app(asr, cleanup)) as client,
+        client.websocket_connect("/v1/dictate") as ws,
+    ):
+        ws.send_json({"type": "start", **start})
+        ws.send_bytes(pcm16(1600))
+        ws.send_json({"type": "stop"})
+        return ws.receive_json()
+
+
+def test_dictionary_corrects_before_cleanup_and_snippet_expands():
+    cleanup = RecordingCleanup()
+    final = dictate(
+        ScriptedASR("Ship sonic flow, then my sign off"),
+        cleanup,
+        {
+            "dictionary": [{"term": "SonicFlow"}],
+            "snippets": [{"trigger": "my sign off", "text": "Thanks, R"}],
+        },
+    )
+    assert cleanup.seen == ["Ship SonicFlow, then my sign off"]
+    assert final["text"] == "Ship SonicFlow, then Thanks, R"
+
+
+def test_whole_utterance_snippet_skips_cleanup():
+    cleanup = RecordingCleanup()
+    final = dictate(
+        ScriptedASR("My email."),
+        cleanup,
+        {"snippets": [{"trigger": "my email", "text": "r@example.com"}]},
+    )
+    assert final["text"] == "r@example.com"
+    assert final["raw"] == "My email."
+    assert cleanup.seen == []
+
+
 def test_audio_before_start_is_an_error(fake_asr):
     with (
         TestClient(create_app(fake_asr, PassthroughCleanup())) as client,

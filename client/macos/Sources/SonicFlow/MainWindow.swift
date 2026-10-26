@@ -4,7 +4,7 @@ import SonicFlowCore
 import SwiftUI
 
 enum Pane: String, CaseIterable, Identifiable {
-    case home, history, settings
+    case home, history, dictionary, snippets, settings
 
     var id: Self { self }
 
@@ -12,6 +12,8 @@ enum Pane: String, CaseIterable, Identifiable {
         switch self {
         case .home: "Home"
         case .history: "History"
+        case .dictionary: "Dictionary"
+        case .snippets: "Snippets"
         case .settings: "Settings"
         }
     }
@@ -20,6 +22,8 @@ enum Pane: String, CaseIterable, Identifiable {
         switch self {
         case .home: "house"
         case .history: "clock.arrow.circlepath"
+        case .dictionary: "character.book.closed"
+        case .snippets: "text.insert"
         case .settings: "gearshape"
         }
     }
@@ -61,7 +65,10 @@ final class MainWindow: NSObject, NSWindowDelegate {
 
     private func makeWindow() -> NSWindow {
         let root = RootView(controller: controller, settingsModel: settingsModel, navigation: navigation)
-        let window = NSWindow(contentViewController: NSHostingController(rootView: root))
+        let hosting = NSHostingController(rootView: root)
+        // By default the window resizes to the content's ideal size, which a List makes enormous.
+        hosting.sizingOptions = []
+        let window = NSWindow(contentViewController: hosting)
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.title = "SonicFlow"
         window.setContentSize(NSSize(width: 860, height: 600))
@@ -93,6 +100,8 @@ struct RootView: View {
                 case .history: HistoryView(
                         controller: controller, settings: controller.settings, model: navigation.history
                     )
+                case .dictionary: DictionaryView(store: controller.vocabulary)
+                case .snippets: SnippetsView(store: controller.vocabulary)
                 case .settings: SettingsView(settings: controller.settings, model: settingsModel)
                 }
             }

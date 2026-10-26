@@ -31,3 +31,21 @@ import Testing
     #expect(ServerMessage.decode(#"{"type":"mystery"}"#) == nil)
     #expect(ServerMessage.decode("not json") == nil)
 }
+
+@Test func startMessageCarriesAppDictionaryAndSnippets() {
+    let json = StartMessage.json(
+        app: "com.tinyspeck.slackmacgap",
+        dictionary: [
+            DictionaryTerm(term: " SonicFlow ", heardAs: "sonic flow, , sonic flo"),
+            DictionaryTerm(term: "  ", heardAs: "ignored"),
+        ],
+        snippets: [Snippet(trigger: "my email", text: "r@example.com"), Snippet(trigger: "empty")]
+    )
+    #expect(
+        json == #"{"app":"com.tinyspeck.slackmacgap","dictionary":[{"heard":["sonic flow","sonic flo"],"term":"SonicFlow"}],"snippets":[{"text":"r@example.com","trigger":"my email"}],"type":"start"}"#
+    )
+}
+
+@Test func startMessageWithoutAppOmitsIt() {
+    #expect(StartMessage.json(app: nil, dictionary: [], snippets: []) == #"{"dictionary":[],"snippets":[],"type":"start"}"#)
+}

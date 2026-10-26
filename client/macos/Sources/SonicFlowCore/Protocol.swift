@@ -43,6 +43,5 @@ public enum ServerMessage: Equatable {
         }
     }
 
-    public static let start = #"{"type":"start"}"#
     public static let stop = #"{"type":"stop"}"#
 }

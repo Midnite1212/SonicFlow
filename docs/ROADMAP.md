@@ -30,7 +30,7 @@
 ## v1 — Wispr Flow parity and beyond
 
 - Mandarin, Cantonese, Japanese (multilingual backend, per-language routing)
-- Personal dictionary and snippets / voice shortcuts
+- [x] Personal dictionary and snippets / voice shortcuts (#44)
 - Per-app styles (Slack casual, email formal, editor → code-aware)
 - Command mode: select text, speak an edit ("make it shorter")
 - History with re-paste
