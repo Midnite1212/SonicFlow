@@ -110,9 +110,9 @@ final class DictationController {
         guard permissions.microphone else { return }
         let warm = settings.keepMicrophoneReady
         if audio.keepWarm != warm {
-            audio.setKeepWarm(warm)
             Log.event("microphone \(warm ? "kept ready" : "started on press")")
         }
+        audio.setKeepWarm(warm)
     }
 
     private func refreshPermissions() {
