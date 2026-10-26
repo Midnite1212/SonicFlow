@@ -14,7 +14,15 @@ Status: **v0 groundwork.** The engine skeleton, wire protocol and benchmark harn
 | `docs/` | Architecture, protocol, latency budget, roadmap, ADRs |
 | `client/macos/` | Swift menu-bar app: hotkey, mic capture, pill, paste |
 
-## Quick start
+## Install
+
+```sh
+scripts/install.sh
+```
+
+Needs an Apple Silicon Mac with `uv` (`brew install uv`) and the Swift toolchain (`xcode-select --install`). It installs the engine's dependencies, downloads the models, starts the background engine, and builds, signs, installs and launches the menu-bar app. Rerun it after pulling changes; it keeps the models chosen in Settings (`SONICFLOW_ASR` / `SONICFLOW_CLEANUP` override them).
+
+## Development
 
 ```sh
 bench/corpus/make_corpus.sh          # synthesize test audio (macOS `say`)

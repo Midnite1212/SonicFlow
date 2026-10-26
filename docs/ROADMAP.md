@@ -23,6 +23,7 @@
 - [ ] v0.5 Engine as a launchd daemon; optional LAN bind so the Mac Studio serves the laptop
   - [x] LaunchAgent with `sonicflow-service`, engine deployed to Application Support (#17)
   - [x] Switch models at runtime, choice saved in config.json (#25)
+  - [x] One-step `scripts/install.sh` (#35)
 
 ## v1 — Wispr Flow parity and beyond
 
