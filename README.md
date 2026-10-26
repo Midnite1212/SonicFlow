@@ -46,7 +46,7 @@ client/macos/scripts/install.sh   # build, sign, install to ~/Applications, laun
 client/macos/scripts/test.sh      # Swift unit tests
 ```
 
-Hold **Option** anywhere to dictate; a pill with a live waveform appears at the bottom of the screen and the cleaned text is pasted into the focused app on release. The app talks to the background engine, so install that first. On first launch it asks for Microphone, Input Monitoring and Accessibility. By default the microphone stays ready with a 200 ms in-memory pre-roll so the first word is never clipped; macOS shows the mic indicator while the app runs, and nothing is sent outside a dictation (`defaults write com.sonicflow.app keepMicrophoneReady -bool false` switches to start-on-press). Builds are signed with a local self-signed "SonicFlow Dev" identity (created on first build in its own keychain) so those grants survive rebuilds.
+Hold **Option** anywhere to dictate; a pill with a live waveform appears at the bottom of the screen and the cleaned text is pasted into the focused app on release. The app talks to the background engine, so install that first. On first launch it asks for Microphone, Input Monitoring and Accessibility. By default the microphone stays ready with a 200 ms in-memory pre-roll so the first word is never clipped; macOS shows the mic indicator while the app runs, and nothing is sent outside a dictation. **Settings…** (⌘,) changes the hotkey, hold vs. tap-to-toggle mode, microphone, models and launch at login. Builds are signed with a local self-signed "SonicFlow Dev" identity (created on first build in its own keychain) so those grants survive rebuilds.
 
 ## Dictate from the terminal
 

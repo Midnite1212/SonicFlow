@@ -1,22 +1,26 @@
 import AppKit
 import CoreGraphics
+import SonicFlowCore
 
-/// Listens system-wide for the Option key via a listen-only event tap (needs Input Monitoring).
+/// Listens system-wide for the dictation hotkey via a listen-only event tap.
 final class HotkeyMonitor {
     /// Times are seconds since boot, comparable with `ProcessInfo.systemUptime`.
     enum Input {
         case hotkeyDown(at: TimeInterval)
         case hotkeyUp(at: TimeInterval)
-        case other
+        case escape
+        /// What interrupted the hotkey, for the log: modifier key codes only, never typed keys.
+        case other(String)
     }
 
-    private static let optionKeyCodes: Set<Int64> = [58, 61]
-    private static let otherModifiers: CGEventFlags = [.maskCommand, .maskControl, .maskShift]
+    private static let escapeKeyCode: Int64 = 53
 
+    var hotkey: Hotkey
     private let handler: (Input) -> Void
     private var tap: CFMachPort?
 
-    init(handler: @escaping (Input) -> Void) {
+    init(hotkey: Hotkey, handler: @escaping (Input) -> Void) {
+        self.hotkey = hotkey
         self.handler = handler
     }
 
@@ -41,25 +45,23 @@ final class HotkeyMonitor {
     }
 
     fileprivate func process(_ type: CGEventType, _ event: CGEvent) {
+        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
         switch type {
         case .tapDisabledByTimeout, .tapDisabledByUserInput:
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
         case .flagsChanged:
-            let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-            guard Self.optionKeyCodes.contains(keyCode) else {
-                handler(.other)
-                return
-            }
             let time = NSEvent(cgEvent: event)?.timestamp ?? ProcessInfo.processInfo.systemUptime
-            if !event.flags.contains(.maskAlternate) {
-                handler(.hotkeyUp(at: time))
-            } else if event.flags.intersection(Self.otherModifiers).isEmpty {
-                handler(.hotkeyDown(at: time))
-            } else {
-                handler(.other)
+            switch hotkey.classify(keyCode: keyCode, flags: event.flags) {
+            case .down: handler(.hotkeyDown(at: time))
+            case .up: handler(.hotkeyUp(at: time))
+            case .other: handler(.other("modifier \(keyCode) flags \(event.flags.rawValue)"))
             }
+        case .keyDown where keyCode == Self.escapeKeyCode:
+            handler(.escape)
+        case .keyDown:
+            handler(.other("key"))
         default:
-            handler(.other)
+            handler(.other("mouse"))
         }
     }
 }

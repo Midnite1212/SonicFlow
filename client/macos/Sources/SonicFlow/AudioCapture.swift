@@ -18,7 +18,9 @@ final class AudioCapture {
     var onLevel: ((Float) -> Void)?
 
     private(set) var keepWarm = false
-    private let engine = AVAudioEngine()
+    private var inputDeviceUID: String?
+    private var engine = AVAudioEngine()
+    private var configurationObserver: NSObjectProtocol?
     private let queue = DispatchQueue(label: "sonicflow.audio")
     private let outputFormat = AVAudioFormat(
         commonFormat: .pcmFormatFloat32, sampleRate: PCM.sampleRate, channels: 1, interleaved: false
@@ -30,9 +32,7 @@ final class AudioCapture {
     private var preroll: [Float] = []
 
     init() {
-        NotificationCenter.default.addObserver(
-            forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
-        ) { [weak self] _ in self?.recover() }
+        observeConfigurationChanges()
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
         ) { [weak self] _ in self?.recover() }
@@ -45,6 +45,27 @@ final class AudioCapture {
         } else if !warm, isRunning, !isDictating {
             halt()
         }
+    }
+
+    /// `nil` follows the system default input as it changes; a missing device falls back to it.
+    /// A fresh engine is built because once a device is pinned, the old one stops following.
+    func setInputDevice(uid: String?) {
+        guard uid != inputDeviceUID, !isDictating else { return }
+        inputDeviceUID = uid
+        let wasRunning = isRunning
+        if wasRunning { halt() }
+        engine = AVAudioEngine()
+        observeConfigurationChanges()
+        if wasRunning { try? run() }
+    }
+
+    private func observeConfigurationChanges() {
+        if let configurationObserver {
+            NotificationCenter.default.removeObserver(configurationObserver)
+        }
+        configurationObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
+        ) { [weak self] _ in self?.recover() }
     }
 
     func start() throws {
@@ -70,6 +91,14 @@ final class AudioCapture {
 
     private func run() throws {
         let input = engine.inputNode
+        if let unit = input.audioUnit,
+            var device = inputDeviceUID.flatMap(AudioDevices.deviceID(forUID:))
+        {
+            AudioUnitSetProperty(
+                unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0,
+                &device, UInt32(MemoryLayout<AudioDeviceID>.size)
+            )
+        }
         let inputFormat = input.outputFormat(forBus: 0)
         guard
             inputFormat.sampleRate > 0,
