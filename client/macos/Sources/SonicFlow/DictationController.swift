@@ -22,6 +22,7 @@ final class DictationController {
     private(set) var lastLatencyMs: Double?
     private(set) var permissions = Permissions.current()
     private(set) var hotkeyActive = false
+    private(set) var history = History()
     let settings = AppSettings()
 
     var statusLine: String {
@@ -207,6 +208,7 @@ final class DictationController {
         case let .final(_, text, _):
             let latency = (ProcessInfo.processInfo.systemUptime - releasedAt) * 1000
             lastLatencyMs = latency
+            history.record(text, latencyMs: latency)
             Log.event("dictation delivered in \(Int(latency)) ms, \(text.count) chars")
             if !text.isEmpty { Paster.paste(text) }
         case let .error(message):
@@ -215,5 +217,14 @@ final class DictationController {
         case .partial:
             break
         }
+    }
+
+    func copyFromHistory(_ entry: History.Entry) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(entry.text, forType: .string)
+    }
+
+    func clearHistory() {
+        history.clear()
     }
 }

@@ -1,4 +1,5 @@
 import AppKit
+import SonicFlowCore
 import SwiftUI
 
 @MainActor
@@ -34,6 +35,16 @@ struct MenuContent: View {
         Text(controller.statusLine)
         if let latency = controller.lastLatencyMs {
             Text("Last dictation: \(Int(latency.rounded())) ms")
+        }
+        if !controller.history.entries.isEmpty {
+            Menu("Recent Dictations") {
+                ForEach(controller.history.entries) { entry in
+                    Button(History.preview(entry.text)) { controller.copyFromHistory(entry) }
+                }
+                Divider()
+                Text("Click to copy · kept in memory only")
+                Button("Clear") { controller.clearHistory() }
+            }
         }
         let permissions = controller.permissions
         if !permissions.microphone || !permissions.accessibility || !controller.hotkeyActive {
