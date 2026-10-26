@@ -19,6 +19,12 @@ SYSTEM_PROMPT = (
     "cleaned text."
 )
 
+EDIT_PROMPT = (
+    "You edit text for a person. They selected the text below and spoke an instruction about it. "
+    "Apply the instruction and output only the complete replacement text, with no quotes, labels, "
+    "or commentary."
+)
+
 EXAMPLES = [
     (
         "Book the flight for Monday, no wait, Tuesday morning.",
@@ -117,6 +123,24 @@ class LLMCleanup(CleanupBackend):
         finally:
             trim_prompt_cache(self._cache, self._cache[0].offset - self._prefix_len)
         return _THINK_BLOCK.sub("", output).strip()
+
+    def edit(self, selection: str, instruction: str) -> str:
+        messages = [
+            {"role": "system", "content": EDIT_PROMPT},
+            {"role": "user", "content": f"Instruction: {instruction}\n\nText:\n{selection}"},
+        ]
+        prompt = self._tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
+        )
+        output = mlx_lm.generate(
+            self._model,
+            self._tokenizer,
+            self._encode(prompt),
+            max_tokens=min(2 * len(self._encode(selection)) + 64, 2048),
+            sampler=self._sampler,
+        )
+        lines = _THINK_BLOCK.sub("", output).strip().splitlines()
+        return "\n".join(line.rstrip() for line in lines)
 
     def clean(self, text: str, context: CleanupContext) -> str:
         parts = []

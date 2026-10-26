@@ -44,4 +44,12 @@ public enum ServerMessage: Equatable {
     }
 
     public static let stop = #"{"type":"stop"}"#
+
+    /// A `stop` for command mode: the engine rewrites `selection` as the spoken instruction asks.
+    public static func stop(selection: String) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let payload = ["type": "stop", "selection": selection]
+        return String(decoding: try! encoder.encode(payload), as: UTF8.self)
+    }
 }

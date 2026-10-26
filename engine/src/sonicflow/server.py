@@ -34,6 +34,10 @@ def _log_failure(future: Future) -> None:
         logger.warning("warm-up failed: %r", error)
 
 
+class CommandError(Exception):
+    """A command-mode request the engine cannot carry out; reported to the client."""
+
+
 class BackendChoice(BaseModel):
     asr: str | None = None
     cleanup: str | None = None
@@ -132,6 +136,21 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
         async def send_error(message: str) -> None:
             await ws.send_json({"type": "error", "message": message})
 
+        async def finish(raw: str, selection: object) -> str:
+            if isinstance(selection, str) and selection.strip():
+                if not raw.strip():
+                    raise CommandError("no instruction heard")
+                try:
+                    return vocabulary.correct(await engine.run(cleanup.edit, selection, raw))
+                except NotImplementedError as error:
+                    raise CommandError(str(error)) from None
+            if (snippet := vocabulary.snippet_for(raw)) is not None:
+                return snippet
+            cleaned = await engine.run(cleanup.clean, vocabulary.correct(raw), context)
+            # Corrected again in case cleanup re-cased a term.
+            styled = apply_style(vocabulary.correct(cleaned), style, frozenset(context.dictionary))
+            return vocabulary.expand(styled)
+
         try:
             while True:
                 message = await ws.receive()
@@ -166,18 +185,13 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
                         stopped_at = time.perf_counter()
                         raw = await engine.run(stream.finalize)
                         asr_done_at = time.perf_counter()
-                        if (snippet := vocabulary.snippet_for(raw)) is not None:
-                            text = snippet
-                        else:
-                            spoken = vocabulary.correct(raw)
-                            cleaned = await engine.run(cleanup.clean, spoken, context)
-                            # Corrected again in case cleanup re-cased a term.
-                            styled = apply_style(
-                                vocabulary.correct(cleaned), style, frozenset(context.dictionary)
-                            )
-                            text = vocabulary.expand(styled)
-                        done_at = time.perf_counter()
                         stream = None
+                        try:
+                            text = await finish(raw, event.get("selection"))
+                        except CommandError as error:
+                            await send_error(str(error))
+                            continue
+                        done_at = time.perf_counter()
                         await ws.send_json(
                             {
                                 "type": "final",

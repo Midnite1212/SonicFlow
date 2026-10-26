@@ -4,7 +4,9 @@ public enum Hotkey: String, CaseIterable, Codable, Sendable {
     case option, rightOption, rightCommand, control, fn
 
     public enum Input: Equatable {
-        case down, up, other
+        /// `downCommand` is the hotkey pressed while Shift is held; `command` is Shift pressed
+        /// while the hotkey is held. Both ask for command mode. `ignored` is Shift released.
+        case down, downCommand, command, ignored, up, other
     }
 
     public var title: String {
@@ -40,12 +42,22 @@ public enum Hotkey: String, CaseIterable, Codable, Sendable {
         .maskAlternate, .maskCommand, .maskControl, .maskShift, .maskSecondaryFn,
     ]
 
-    /// Classifies a `flagsChanged` event: the hotkey pressed alone, the hotkey released, or
-    /// something else (another modifier, or the hotkey pressed together with one).
+    private static let shiftKeyCodes: Set<Int64> = [56, 60]
+
+    /// Classifies a `flagsChanged` event: the hotkey pressed or released, Shift joining or leaving
+    /// it, or something else (any other modifier combination).
     public func classify(keyCode: Int64, flags: CGEventFlags) -> Input {
-        guard keyCodes.contains(keyCode) else { return .other }
-        guard flags.contains(flag) else { return .up }
         let others = flags.intersection(Self.modifiers).subtracting(flag)
-        return others.isEmpty ? .down : .other
+        if keyCodes.contains(keyCode) {
+            guard flags.contains(flag) else { return .up }
+            if others.isEmpty { return .down }
+            return others == .maskShift ? .downCommand : .other
+        }
+        if Self.shiftKeyCodes.contains(keyCode), flags.contains(flag),
+            others.subtracting(.maskShift).isEmpty
+        {
+            return flags.contains(.maskShift) ? .command : .ignored
+        }
+        return .other
     }
 }

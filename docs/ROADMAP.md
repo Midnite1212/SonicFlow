@@ -32,7 +32,7 @@
 - Mandarin, Cantonese, Japanese (multilingual backend, per-language routing)
 - [x] Personal dictionary and snippets / voice shortcuts (#44)
 - [x] Per-app styles: standard, casual, lowercase (#46)
-- Command mode: select text, speak an edit ("make it shorter")
+- [x] Command mode: select text, hold the hotkey with Shift, speak an edit (#48)
 - History with re-paste
 - Cloud-hosted engine on a GPU host (ADR 0004)
 

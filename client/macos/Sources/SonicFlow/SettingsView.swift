@@ -138,9 +138,9 @@ struct SettingsView: View {
     private var modeHint: String {
         switch settings.talkMode {
         case .hold:
-            "Hold \(settings.hotkey.title) while speaking. A quick tap or using it with another key cancels."
+            "Hold \(settings.hotkey.title) while speaking. A quick tap or using it with another key cancels. Add Shift to edit selected text by voice."
         case .toggle:
-            "Tap \(settings.hotkey.title) to start and again to stop. Esc cancels."
+            "Tap \(settings.hotkey.title) to start and again to stop. Esc cancels. Press Shift while talking to edit selected text by voice."
         }
     }
 

@@ -9,11 +9,24 @@ final class HotkeyMonitor {
         case hotkeyDown(at: TimeInterval)
         case hotkeyUp(at: TimeInterval)
         case escape
+        /// Shift held with the hotkey: edit the selection instead of dictating.
+        case command
         /// What interrupted the hotkey, for the log: modifier key codes only, never typed keys.
         case other(String)
     }
 
     private static let escapeKeyCode: Int64 = 53
+    /// Tags the keystrokes SonicFlow posts itself (copy, paste) so they never cancel a dictation.
+    static let syntheticMarker: Int64 = 0x534F_4E49_43
+
+    static func post(_ keyCode: CGKeyCode, flags: CGEventFlags, source: CGEventSource?) {
+        for keyDown in [true, false] {
+            let event = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: keyDown)
+            event?.flags = flags
+            event?.setIntegerValueField(.eventSourceUserData, value: syntheticMarker)
+            event?.post(tap: .cghidEventTap)
+        }
+    }
 
     var hotkey: Hotkey
     private let handler: (Input) -> Void
@@ -45,6 +58,7 @@ final class HotkeyMonitor {
     }
 
     fileprivate func process(_ type: CGEventType, _ event: CGEvent) {
+        guard event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { return }
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
         switch type {
         case .tapDisabledByTimeout, .tapDisabledByUserInput:
@@ -53,6 +67,11 @@ final class HotkeyMonitor {
             let time = NSEvent(cgEvent: event)?.timestamp ?? ProcessInfo.processInfo.systemUptime
             switch hotkey.classify(keyCode: keyCode, flags: event.flags) {
             case .down: handler(.hotkeyDown(at: time))
+            case .downCommand:
+                handler(.hotkeyDown(at: time))
+                handler(.command)
+            case .command: handler(.command)
+            case .ignored: break
             case .up: handler(.hotkeyUp(at: time))
             case .other: handler(.other("modifier \(keyCode) flags \(event.flags.rawValue)"))
             }

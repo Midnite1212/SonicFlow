@@ -58,15 +58,49 @@ class RecordingCleanup(PassthroughCleanup):
         return text
 
 
-def dictate(asr, cleanup, start: dict) -> dict:
+def dictate(asr, cleanup, start: dict, stop: dict | None = None) -> dict:
     with (
         TestClient(create_app(asr, cleanup)) as client,
         client.websocket_connect("/v1/dictate") as ws,
     ):
         ws.send_json({"type": "start", **start})
         ws.send_bytes(pcm16(1600))
-        ws.send_json({"type": "stop"})
+        ws.send_json({"type": "stop", **(stop or {})})
         return ws.receive_json()
+
+
+class EditingCleanup(RecordingCleanup):
+    def edit(self, selection, instruction):
+        return f"{instruction.upper()}: {selection}"
+
+
+def test_command_mode_edits_the_selection():
+    final = dictate(
+        ScriptedASR("make it loud"),
+        EditingCleanup(),
+        {"dictionary": ["SonicFlow"]},
+        {"selection": "ship sonicflow"},
+    )
+    assert final["type"] == "final"
+    assert final["text"] == "MAKE IT LOUD: ship SonicFlow"
+    assert final["raw"] == "make it loud"
+
+
+def test_command_mode_errors_without_llm_or_instruction():
+    final = dictate(ScriptedASR("shorter"), PassthroughCleanup(), {}, {"selection": "text"})
+    assert final == {
+        "type": "error",
+        "message": "command mode needs an LLM cleanup model, not 'none'",
+    }
+    final = dictate(ScriptedASR(" "), EditingCleanup(), {}, {"selection": "text"})
+    assert final == {"type": "error", "message": "no instruction heard"}
+
+
+def test_blank_selection_is_normal_dictation():
+    cleanup = RecordingCleanup()
+    final = dictate(ScriptedASR("hello"), cleanup, {}, {"selection": "  "})
+    assert final["text"] == "hello"
+    assert cleanup.seen == ["hello"]
 
 
 def test_dictionary_corrects_before_cleanup_and_snippet_expands():

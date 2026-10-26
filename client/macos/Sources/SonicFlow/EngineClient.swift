@@ -29,10 +29,10 @@ final class EngineClient: NSObject, URLSessionWebSocketDelegate {
         queue.async { self.send(.data(chunk)) }
     }
 
-    func finish(_ completion: @escaping (ServerMessage) -> Void) {
+    func finish(selection: String? = nil, _ completion: @escaping (ServerMessage) -> Void) {
         queue.async {
             self.pending = completion
-            self.send(.string(ServerMessage.stop))
+            self.send(.string(selection.map(ServerMessage.stop(selection:)) ?? ServerMessage.stop))
         }
     }
 
