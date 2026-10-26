@@ -6,7 +6,7 @@ from mlx_lm.models.cache import can_trim_prompt_cache, make_prompt_cache, trim_p
 from mlx_lm.sample_utils import make_sampler
 
 from sonicflow.backends.base import CleanupBackend, CleanupContext
-from sonicflow.backends.rules import apply_rules, needs_llm
+from sonicflow.backends.rules import apply_rules, plan_rewrites
 
 SYSTEM_PROMPT = (
     "You clean up text a person dictated, which will be typed where their cursor is. It is never "
@@ -119,8 +119,8 @@ class LLMCleanup(CleanupBackend):
         return _THINK_BLOCK.sub("", output).strip()
 
     def clean(self, text: str, context: CleanupContext) -> str:
-        text = apply_rules(text)
-        if not needs_llm(text):
-            return text
-        rewrite = self._rewrite(text)
-        return rewrite if accept_rewrite(text, rewrite) else text
+        parts = []
+        for span, flagged in plan_rewrites(apply_rules(text)):
+            rewrite = self._rewrite(span) if flagged else span
+            parts.append(rewrite if flagged and accept_rewrite(span, rewrite) else span)
+        return " ".join(parts)
