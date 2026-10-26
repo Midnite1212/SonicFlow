@@ -11,7 +11,7 @@ def test_plist_runs_engine_offline_and_unthrottled(tmp_path):
     assert plist["Label"] == LABEL
     assert plist["ProgramArguments"] == [str(program)]
     assert plist["WorkingDirectory"] == "/support/SonicFlow"
-    assert plist["EnvironmentVariables"] == {"HF_HUB_OFFLINE": "1"}
+    assert "EnvironmentVariables" not in plist
     assert plist["RunAtLoad"] and plist["KeepAlive"]
     assert plist["ProcessType"] == "Interactive"
     assert plist["StandardErrorPath"] == str(tmp_path / "engine.log")

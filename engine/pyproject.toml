@@ -15,6 +15,7 @@ dependencies = [
 sonicflow = "sonicflow.server:main"
 sonicflow-bench = "sonicflow.bench.cli:main"
 sonicflow-mic = "sonicflow.mic:main"
+sonicflow-models = "sonicflow.models_cli:main"
 sonicflow-service = "sonicflow.service:main"
 
 [project.optional-dependencies]

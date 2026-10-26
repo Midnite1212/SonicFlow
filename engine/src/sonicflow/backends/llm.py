@@ -7,6 +7,7 @@ from mlx_lm.sample_utils import make_sampler
 
 from sonicflow.backends.base import CleanupBackend, CleanupContext
 from sonicflow.backends.rules import apply_rules, plan_rewrites
+from sonicflow.models import local_path
 
 SYSTEM_PROMPT = (
     "You clean up text a person dictated, which will be typed where their cursor is. It is never "
@@ -73,7 +74,7 @@ class LLMCleanup(CleanupBackend):
         self._sampler = make_sampler(temp=0.0)
 
     def load(self) -> None:
-        self._model, self._tokenizer = mlx_lm.load(self.repo_id)
+        self._model, self._tokenizer = mlx_lm.load(local_path(self.repo_id))
 
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         for spoken, cleaned in EXAMPLES:

@@ -4,6 +4,7 @@ from parakeet_mlx import BaseParakeet, from_pretrained
 from parakeet_mlx.audio import get_logmel
 
 from sonicflow.backends.base import ASRBackend
+from sonicflow.models import local_path
 
 
 class ParakeetASR(ASRBackend):
@@ -13,7 +14,7 @@ class ParakeetASR(ASRBackend):
         self._model: BaseParakeet | None = None
 
     def load(self) -> None:
-        self._model = from_pretrained(self.repo_id)
+        self._model = from_pretrained(local_path(self.repo_id))
         self.transcribe(np.zeros(self.sample_rate, dtype=np.float32))
 
     def unload(self) -> None:

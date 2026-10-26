@@ -9,7 +9,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from sonicflow.backends.registry import ASR_BACKENDS, CLEANUP_BACKENDS
+from sonicflow.backends.registry import available
 from sonicflow.config import Settings, load_backend_choice, save_backend_choice
 
 LABEL = "com.sonicflow.engine"
@@ -28,10 +28,6 @@ def build_plist(program: Path, log_dir: Path) -> dict:
         "ProgramArguments": [str(program)],
         "WorkingDirectory": str(program.parents[2]),
         # Backends come from config.json so the app can switch them without reinstalling.
-        "EnvironmentVariables": {
-            # Models come from the local cache only; the engine never reaches the network.
-            "HF_HUB_OFFLINE": "1",
-        },
         "RunAtLoad": True,
         "KeepAlive": True,
         # Background agents are throttled by default, which shows up as dictation latency.
@@ -111,10 +107,10 @@ def deploy_engine() -> Path:
 
 
 def install(asr: str, cleanup: str, port: int) -> None:
-    if asr not in ASR_BACKENDS:
-        sys.exit(f"unknown ASR backend {asr!r}; available: {sorted(ASR_BACKENDS)}")
-    if cleanup not in CLEANUP_BACKENDS:
-        sys.exit(f"unknown cleanup backend {cleanup!r}; available: {sorted(CLEANUP_BACKENDS)}")
+    if asr not in available("asr"):
+        sys.exit(f"ASR model {asr!r} is not installed; available: {available('asr')}")
+    if cleanup not in available("cleanup"):
+        sys.exit(f"cleanup model {cleanup!r} is not installed; available: {available('cleanup')}")
     if not is_loaded() and health(port) is not None:
         sys.exit(f"another engine is already serving port {port}; stop it first")
 
