@@ -74,6 +74,14 @@ The terminal app needs Microphone, Accessibility and Input Monitoring permission
 - [Qwen3](https://huggingface.co/Qwen) 1.7B and 4B Instruct 2507 by Alibaba Qwen, Apache-2.0, run via [mlx-lm](https://github.com/ml-explore/mlx-lm)
 - [Whisper large-v3-turbo](https://huggingface.co/openai/whisper-large-v3-turbo) by OpenAI, MIT, run via [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
 
+## Benchmark this Mac
+
+```sh
+scripts/bench-machine.sh
+```
+
+Runs the standard backend matrix twice and prints rows for `docs/LATENCY.md`.
+
 ## Docs
 
 - [Architecture](docs/ARCHITECTURE.md)

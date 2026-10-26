@@ -25,6 +25,19 @@ Accuracy floor: corpus WER (raw vs spoken) ≤ 5% on the synthetic corpus; re-ba
 
 ## Results
 
+Current matrix (22-item corpus, `scripts/bench-machine.sh`, two runs each):
+
+| Date | Machine | ASR | Cleanup | release→text p50 / p95 | WER raw | WER clean |
+|---|---|---|---|---|---|---|
+| 2026-10-26 | Apple M3 Pro | parakeet-v2 | none | 115–138 / 394–550 ms | 4.9% | 17.6% |
+| 2026-10-26 | Apple M3 Pro | parakeet-v3 | none | 115–141 / 329–404 ms | 4.9% | 17.6% |
+| 2026-10-26 | Apple M3 Pro | whisper-turbo | none | 588–592 / 783–788 ms | 5.9% | 16.0% |
+| 2026-10-26 | Apple M3 Pro | parakeet-v2 | rules | 112–115 / 295–417 ms | 4.9% | 15.3% |
+| 2026-10-26 | Apple M3 Pro | parakeet-v2 | qwen3-1.7b | 229–232 / 291–317 ms | 4.9% | 4.2% |
+| 2026-10-26 | Apple M3 Pro | parakeet-v2 | qwen3-4b | 362–367 / 472–498 ms | 4.9% | 2.7% |
+
+History:
+
 | Date | Machine | ASR | Cleanup | release→text p50 / p95 | WER raw | WER clean |
 |---|---|---|---|---|---|---|
 | 2026-10-23 | Apple M3 Pro | parakeet-v2 | none | 110–111 / 181–213 ms | 7.1% | — |
