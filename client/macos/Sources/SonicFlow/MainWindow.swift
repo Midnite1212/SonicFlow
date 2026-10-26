@@ -4,7 +4,7 @@ import SonicFlowCore
 import SwiftUI
 
 enum Pane: String, CaseIterable, Identifiable {
-    case home, history, dictionary, snippets, settings
+    case home, history, dictionary, snippets, styles, settings
 
     var id: Self { self }
 
@@ -14,6 +14,7 @@ enum Pane: String, CaseIterable, Identifiable {
         case .history: "History"
         case .dictionary: "Dictionary"
         case .snippets: "Snippets"
+        case .styles: "Styles"
         case .settings: "Settings"
         }
     }
@@ -24,6 +25,7 @@ enum Pane: String, CaseIterable, Identifiable {
         case .history: "clock.arrow.circlepath"
         case .dictionary: "character.book.closed"
         case .snippets: "text.insert"
+        case .styles: "textformat"
         case .settings: "gearshape"
         }
     }
@@ -100,8 +102,9 @@ struct RootView: View {
                 case .history: HistoryView(
                         controller: controller, settings: controller.settings, model: navigation.history
                     )
-                case .dictionary: DictionaryView(store: controller.vocabulary)
-                case .snippets: SnippetsView(store: controller.vocabulary)
+                case .dictionary: DictionaryView(store: controller.personalization)
+                case .snippets: SnippetsView(store: controller.personalization)
+                case .styles: StylesView(store: controller.personalization)
                 case .settings: SettingsView(settings: controller.settings, model: settingsModel)
                 }
             }

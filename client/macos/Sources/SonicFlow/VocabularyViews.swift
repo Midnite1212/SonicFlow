@@ -2,7 +2,7 @@ import SonicFlowCore
 import SwiftUI
 
 struct DictionaryView: View {
-    @Bindable var store: VocabularyStore
+    @Bindable var store: Personalization
 
     var body: some View {
         VocabularyPane(
@@ -29,7 +29,7 @@ struct DictionaryView: View {
 }
 
 struct SnippetsView: View {
-    @Bindable var store: VocabularyStore
+    @Bindable var store: Personalization
 
     var body: some View {
         VocabularyPane(
