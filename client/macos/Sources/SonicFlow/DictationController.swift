@@ -242,7 +242,7 @@ final class DictationController {
             return
         }
         state = .processing
-        pill.model.phase = .processing
+        pill.model.process()
         guard let selection else {
             engine.finish { [weak self] message in
                 Task { @MainActor in self?.deliver(message, command: false) }
@@ -267,7 +267,7 @@ final class DictationController {
             lastLatencyMs = latency
             if !text.isEmpty {
                 let app = NSWorkspace.shared.frontmostApplication?.localizedName
-                history.record(text, latencyMs: latency, appName: app)
+                history.record(text, latencyMs: latency, appName: app, isEdit: command)
                 // An edit's words weren't spoken, so they stay out of the speaking stats.
                 if !command {
                     stats.record(

@@ -73,64 +73,80 @@ struct SettingsView: View {
     let model: SettingsModel
 
     var body: some View {
-        Form {
-            Section("Dictation") {
-                Picker("Hotkey", selection: $settings.hotkey) {
-                    ForEach(Hotkey.allCases, id: \.self) { Text($0.title).tag($0) }
+        Group {
+            Panel("Dictation") {
+                SettingRow("Hotkey") {
+                    Picker("Hotkey", selection: $settings.hotkey) {
+                        ForEach(Hotkey.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .quietPicker()
                 }
-                Picker("Mode", selection: $settings.talkMode) {
-                    ForEach(TalkMode.allCases, id: \.self) { Text($0.title).tag($0) }
+                Seam()
+                SettingRow("Mode", hint: modeHint) {
+                    Picker("Mode", selection: $settings.talkMode) {
+                        ForEach(TalkMode.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .quietPicker()
                 }
-                Text(modeHint).font(.caption).foregroundStyle(.secondary)
             }
-
-            Section("Microphone") {
-                Picker("Input", selection: $settings.inputDeviceUID) {
-                    Text("System default").tag(String?.none)
-                    ForEach(model.devices) { Text($0.name).tag(Optional($0.uid)) }
+            Panel("Microphone") {
+                SettingRow("Input") {
+                    Picker("Input", selection: $settings.inputDeviceUID) {
+                        Text("System default").tag(String?.none)
+                        ForEach(model.devices) { Text($0.name).tag(Optional($0.uid)) }
+                    }
+                    .quietPicker()
                 }
-                Toggle("Keep microphone ready", isOn: $settings.keepMicrophoneReady)
-                Text(
-                    "Starts instantly and keeps the moment before you press the hotkey. macOS shows "
-                        + "the mic indicator while SonicFlow runs; audio outside a dictation is "
-                        + "never sent."
-                )
-                .font(.caption).foregroundStyle(.secondary)
+                Seam()
+                SettingRow(
+                    "Keep microphone ready",
+                    hint: "Starts instantly and keeps the moment before you press the hotkey. macOS shows "
+                        + "the mic indicator while SonicFlow runs; audio outside a dictation is never sent."
+                ) {
+                    Toggle("Keep microphone ready", isOn: $settings.keepMicrophoneReady)
+                        .toggleStyle(.switch).labelsHidden()
+                }
             }
-
-            Section("Models") {
+            Panel("Models") {
                 if let backends = model.backends {
-                    Picker("Speech recognition", selection: binding(\.asr, backends.asr.active)) {
-                        ForEach(backends.asr.available, id: \.self) { Text($0).tag($0) }
+                    SettingRow("Speech recognition") {
+                        Picker("Speech recognition", selection: binding(\.asr, backends.asr.active)) {
+                            ForEach(backends.asr.available, id: \.self) { Text($0).tag($0) }
+                        }
+                        .quietPicker()
                     }
-                    Picker("Cleanup", selection: binding(\.cleanup, backends.cleanup.active)) {
-                        ForEach(backends.cleanup.available, id: \.self) { Text($0).tag($0) }
+                    Seam()
+                    SettingRow("Cleanup") {
+                        Picker("Cleanup", selection: binding(\.cleanup, backends.cleanup.active)) {
+                            ForEach(backends.cleanup.available, id: \.self) { Text($0).tag($0) }
+                        }
+                        .quietPicker()
+                        .disabled(model.switching)
                     }
-                    .disabled(model.switching)
                 } else {
-                    Text("Engine not reachable").foregroundStyle(.secondary)
+                    Text("Engine not reachable").foregroundStyle(Theme.alert)
                 }
+                Seam()
                 HStack {
                     if model.switching { ProgressView().controlSize(.small) }
                     if let engineMessage = model.engineMessage {
-                        Text(engineMessage).font(.caption).foregroundStyle(.secondary)
+                        Text(engineMessage).font(.callout).foregroundStyle(Theme.tertiary)
                     }
                     Spacer()
                     Button("Restart Engine") { model.restartEngine() }
                 }
             }
-
-            Section("General") {
-                Toggle(
-                    "Launch SonicFlow at login",
-                    isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) })
-                )
-                if let loginMessage = model.loginMessage {
-                    Text(loginMessage).font(.caption).foregroundStyle(.secondary)
+            Panel("General") {
+                SettingRow("Launch SonicFlow at login", hint: model.loginMessage) {
+                    Toggle(
+                        "Launch SonicFlow at login",
+                        isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) })
+                    )
+                    .toggleStyle(.switch).labelsHidden()
                 }
             }
         }
-        .formStyle(.grouped)
+        .panelColumn()
         .navigationTitle("Settings")
         .task { await model.refresh() }
     }

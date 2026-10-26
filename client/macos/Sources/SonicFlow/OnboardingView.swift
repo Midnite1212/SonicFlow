@@ -34,9 +34,11 @@ struct OnboardingView: View {
                 .frame(maxWidth: 520)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(32)
-            Divider()
+            Divider().overlay(Theme.seam)
             footer.padding(16)
         }
+        .foregroundStyle(Theme.text)
+        .background(Theme.ground)
     }
 
     @ViewBuilder private var content: some View {
@@ -54,7 +56,7 @@ struct OnboardingView: View {
             HStack(spacing: 6) {
                 ForEach(OnboardingModel.Step.allCases, id: \.self) { step in
                     Circle()
-                        .fill(step == model.step ? Color.accentColor : Color.secondary.opacity(0.3))
+                        .fill(step == model.step ? Theme.text : Theme.seam)
                         .frame(width: 7, height: 7)
                 }
             }
@@ -81,7 +83,7 @@ struct OnboardingView: View {
                     + "cleanup run on this Mac; audio never leaves it."
             )
             .multilineTextAlignment(.center)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.secondary)
         }
     }
 
@@ -111,58 +113,85 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 20) {
             StepTitle("Speech engine", "The engine runs in the background on this Mac and starts at login.")
             if controller.state == .offline {
-                Label("Engine not running", systemImage: "xmark.circle.fill").foregroundStyle(.red)
+                Label("Engine not running", systemImage: "xmark.circle.fill").foregroundStyle(Theme.alert)
                 Text("Run scripts/install.sh from the SonicFlow folder once, or restart it here.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondary)
                 Button("Restart Engine") { settingsModel.restartEngine() }
                 if let message = settingsModel.engineMessage {
-                    Text(message).font(.caption).foregroundStyle(.secondary)
+                    Text(message).font(.caption).foregroundStyle(Theme.tertiary)
                 }
             } else {
-                Label("Engine running", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                Label("Engine running", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.ready)
                 if let backends = settingsModel.backends {
                     LabeledContent("Speech recognition", value: backends.asr.active)
                     LabeledContent("Cleanup", value: backends.cleanup.active)
                 }
-                Text("You can switch models later in Settings.").foregroundStyle(.secondary)
+                Text("You can switch models later in Settings.").foregroundStyle(Theme.secondary)
             }
         }
         .task { await settingsModel.loadBackends() }
     }
 
     private var hotkey: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        let latest = model.practiceText.isEmpty ? nil : controller.history.entries.first
+        return VStack(alignment: .leading, spacing: 20) {
             StepTitle("Pick your hotkey", "Then click in the box below, hold it, and say something.")
-            Form {
-                Picker("Hotkey", selection: $settings.hotkey) {
-                    ForEach(Hotkey.allCases, id: \.self) { Text($0.title).tag($0) }
+            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
+                GridRow {
+                    Text("Hotkey").foregroundStyle(Theme.secondary)
+                    Picker("Hotkey", selection: $settings.hotkey) {
+                        ForEach(Hotkey.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .labelsHidden()
+                    .frame(width: 240)
                 }
-                Picker("Mode", selection: $settings.talkMode) {
-                    ForEach(TalkMode.allCases, id: \.self) { Text($0.title).tag($0) }
+                GridRow {
+                    Text("Mode").foregroundStyle(Theme.secondary)
+                    Picker("Mode", selection: $settings.talkMode) {
+                        ForEach(TalkMode.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .labelsHidden()
+                    .frame(width: 240)
                 }
             }
-            .formStyle(.grouped)
-            .scrollDisabled(true)
-            .frame(height: 110)
-            TextEditor(text: $model.practiceText)
-                .font(.body)
-                .frame(height: 110)
-                .padding(6)
-                .background(.background, in: RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(.quaternary))
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $model.practiceText)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .scrollIndicators(.never)
+                if model.practiceText.isEmpty {
+                    Text("Hold \(settings.hotkey.title) and say something…")
+                        .foregroundStyle(Theme.tertiary)
+                        .padding(.leading, 5)
+                        .allowsHitTesting(false)
+                }
+            }
+            .frame(height: 100)
+            .padding(8)
+            .background(Theme.panel, in: RoundedRectangle(cornerRadius: 7))
+            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Theme.seam))
+            HStack(spacing: 12) {
+                Text("Release to text").foregroundStyle(Theme.secondary)
+                SpeedStripe(ms: latest?.latencyMs, height: 6, showsBudget: true)
+                Text(latest.map { Format.ms($0.latencyMs) } ?? "—")
+                    .monospacedDigit()
+                    .foregroundStyle(latest.map { Theme.Speed(ms: $0.latencyMs).text } ?? Theme.tertiary)
+                    .frame(width: 64, alignment: .trailing)
+            }
+            .font(.callout)
         }
     }
 
     private var done: some View {
         VStack(spacing: 16) {
-            Image(systemName: "checkmark.seal.fill").font(.system(size: 56)).foregroundStyle(.green)
+            AppIcon(size: 96)
             Text("You're set").font(.largeTitle.weight(.semibold))
             Text(
                 "SonicFlow lives in the menu bar (\(Image(systemName: "waveform"))). Open this window from "
                     + "there to see your stats, history, and settings."
             )
             .multilineTextAlignment(.center)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.secondary)
         }
     }
 }
@@ -179,7 +208,7 @@ private struct StepTitle: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.title.weight(.semibold))
-            Text(detail).foregroundStyle(.secondary)
+            Text(detail).foregroundStyle(Theme.secondary)
         }
     }
 }
@@ -194,10 +223,10 @@ private struct PermissionRow: View {
         HStack(spacing: 12) {
             Image(systemName: granted ? "checkmark.circle.fill" : "circle")
                 .font(.title2)
-                .foregroundStyle(granted ? .green : .secondary)
+                .foregroundStyle(granted ? Theme.ready : Theme.tertiary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline)
-                Text(detail).foregroundStyle(.secondary)
+                Text(detail).foregroundStyle(Theme.secondary)
             }
             Spacer()
             if !granted {
