@@ -4,7 +4,7 @@ import SonicFlowCore
 import SwiftUI
 
 enum Pane: String, CaseIterable, Identifiable {
-    case home, history, dictionary, snippets, styles, settings
+    case home, history, dictionary, snippets, styles, models, settings
 
     var id: Self { self }
 
@@ -15,6 +15,7 @@ enum Pane: String, CaseIterable, Identifiable {
         case .dictionary: "Dictionary"
         case .snippets: "Snippets"
         case .styles: "Styles"
+        case .models: "Models"
         case .settings: "Settings"
         }
     }
@@ -26,6 +27,7 @@ enum Pane: String, CaseIterable, Identifiable {
         case .dictionary: "character.book.closed"
         case .snippets: "text.insert"
         case .styles: "textformat"
+        case .models: "cpu"
         case .settings: "gearshape"
         }
     }
@@ -37,6 +39,7 @@ final class Navigation {
     var pane: Pane? = .home
     let history = HistoryViewModel()
     let onboarding = OnboardingModel()
+    let models = ModelsModel()
 }
 
 /// Owns the app window. SonicFlow is a menu-bar accessory, so it joins the Dock and the app
@@ -119,7 +122,8 @@ struct RootView: View {
                 case .dictionary: DictionaryView(store: controller.personalization)
                 case .snippets: SnippetsView(store: controller.personalization)
                 case .styles: StylesView(store: controller.personalization)
-                case .settings: SettingsView(settings: controller.settings, model: settingsModel)
+                case .models: ModelsView(model: navigation.models)
+                case .settings: SettingsView(settings: controller.settings, model: settingsModel, navigation: navigation)
                 }
             }
         } else {

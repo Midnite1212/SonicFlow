@@ -71,6 +71,7 @@ final class SettingsModel {
 struct SettingsView: View {
     @Bindable var settings: AppSettings
     let model: SettingsModel
+    let navigation: Navigation
 
     var body: some View {
         Group {
@@ -107,28 +108,12 @@ struct SettingsView: View {
                         .toggleStyle(.switch).labelsHidden()
                 }
             }
-            Panel("Models") {
-                if let backends = model.backends {
-                    SettingRow("Speech recognition") {
-                        Picker("Speech recognition", selection: binding(\.asr, backends.asr.active)) {
-                            ForEach(backends.asr.available, id: \.self) { Text($0).tag($0) }
-                        }
-                        .quietPicker()
-                    }
-                    Seam()
-                    SettingRow("Cleanup") {
-                        Picker("Cleanup", selection: binding(\.cleanup, backends.cleanup.active)) {
-                            ForEach(backends.cleanup.available, id: \.self) { Text($0).tag($0) }
-                        }
-                        .quietPicker()
-                        .disabled(model.switching)
-                    }
-                } else {
-                    Text("Engine not reachable").foregroundStyle(Theme.alert)
+            Panel("Engine") {
+                SettingRow("Models", hint: "Choose, download and add speech and cleanup models in Models.") {
+                    Button("Open Models") { navigation.pane = .models }
                 }
                 Seam()
                 HStack {
-                    if model.switching { ProgressView().controlSize(.small) }
                     if let engineMessage = model.engineMessage {
                         Text(engineMessage).font(.callout).foregroundStyle(Theme.tertiary)
                     }
@@ -158,16 +143,5 @@ struct SettingsView: View {
         case .toggle:
             "Tap \(settings.hotkey.title) to start and again to stop. Esc cancels. Press Shift while talking to edit selected text by voice."
         }
-    }
-
-    private func binding(_ kind: KeyPath<Backends, Backends.Kind>, _ active: String) -> Binding<String> {
-        Binding(
-            get: { active },
-            set: { choice in
-                Task {
-                    await model.switchBackend(asr: kind == \.asr ? choice : nil, cleanup: kind == \.cleanup ? choice : nil)
-                }
-            }
-        )
     }
 }
