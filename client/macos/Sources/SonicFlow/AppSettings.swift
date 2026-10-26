@@ -26,11 +26,28 @@ final class AppSettings {
         didSet { save(keepMicrophoneReady, "keepMicrophoneReady") }
     }
 
+    /// Off by default: dictated text stays in memory unless the user opts in.
+    var saveHistory: Bool {
+        didSet { save(saveHistory, "saveHistory") }
+    }
+
+    var historyRetention: HistoryRetention {
+        didSet { save(historyRetention.rawValue, "historyRetention") }
+    }
+
+    var onboarded: Bool {
+        didSet { save(onboarded, "onboarded") }
+    }
+
     init() {
         hotkey = defaults.string(forKey: "hotkey").flatMap(Hotkey.init(rawValue:)) ?? .option
         talkMode = defaults.string(forKey: "talkMode").flatMap(TalkMode.init(rawValue:)) ?? .hold
         inputDeviceUID = defaults.string(forKey: "inputDeviceUID")
         keepMicrophoneReady = defaults.object(forKey: "keepMicrophoneReady") as? Bool ?? true
+        saveHistory = defaults.bool(forKey: "saveHistory")
+        historyRetention =
+            defaults.string(forKey: "historyRetention").flatMap(HistoryRetention.init(rawValue:)) ?? .week
+        onboarded = defaults.bool(forKey: "onboarded")
     }
 
     private func save(_ value: Any?, _ key: String) {

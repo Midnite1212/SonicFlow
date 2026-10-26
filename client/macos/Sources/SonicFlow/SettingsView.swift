@@ -131,12 +131,8 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 460)
-        .fixedSize(horizontal: false, vertical: true)
-        .task {
-            NSApp.activate()
-            await model.refresh()
-        }
+        .navigationTitle("Settings")
+        .task { await model.refresh() }
     }
 
     private var modeHint: String {
