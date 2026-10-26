@@ -8,6 +8,8 @@
     <string>SonicFlow</string>
     <key>CFBundleDisplayName</key>
     <string>SonicFlow</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleExecutable</key>
     <string>SonicFlow</string>
     <key>CFBundlePackageType</key>
