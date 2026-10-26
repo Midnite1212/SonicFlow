@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from sonicflow.backends.base import ASRBackend, ASRStream, CleanupBackend, CleanupContext
 from sonicflow.backends.registry import ASR_BACKENDS, CLEANUP_BACKENDS, create_asr, create_cleanup
 from sonicflow.config import Settings, save_backend_choice
+from sonicflow.vocabulary import Vocabulary, common_words
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,7 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
     async def lifespan(_: FastAPI):
         await engine.run(asr.load)
         await engine.run(cleanup.load)
+        await engine.run(common_words)
         yield
         engine.shutdown()
 
@@ -123,6 +125,7 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
         stream: ASRStream | None = None
         cleanup = engine.cleanup
         context = CleanupContext()
+        vocabulary = Vocabulary()
 
         async def send_error(message: str) -> None:
             await ws.send_json({"type": "error", "message": message})
@@ -148,9 +151,10 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
                         stream = await engine.run(engine.asr.stream)
                         cleanup = engine.cleanup
                         engine.warm_in_background()
+                        vocabulary = Vocabulary.from_event(event)
                         context = CleanupContext(
                             app_bundle_id=event.get("app"),
-                            dictionary=tuple(event.get("dictionary", ())),
+                            dictionary=tuple(term.term for term in vocabulary.terms),
                         )
                     case "stop":
                         if stream is None:
@@ -159,7 +163,13 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
                         stopped_at = time.perf_counter()
                         raw = await engine.run(stream.finalize)
                         asr_done_at = time.perf_counter()
-                        text = await engine.run(cleanup.clean, raw, context)
+                        if (snippet := vocabulary.snippet_for(raw)) is not None:
+                            text = snippet
+                        else:
+                            spoken = vocabulary.correct(raw)
+                            cleaned = await engine.run(cleanup.clean, spoken, context)
+                            # Corrected again in case cleanup re-cased a term.
+                            text = vocabulary.expand(vocabulary.correct(cleaned))
                         done_at = time.perf_counter()
                         stream = None
                         await ws.send_json(

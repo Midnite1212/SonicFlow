@@ -21,8 +21,8 @@ final class EngineClient: NSObject, URLSessionWebSocketDelegate {
         queue.async { self.open() }
     }
 
-    func begin() {
-        queue.async { self.send(.string(ServerMessage.start)) }
+    func begin(_ start: String) {
+        queue.async { self.send(.string(start)) }
     }
 
     func sendAudio(_ chunk: Data) {
