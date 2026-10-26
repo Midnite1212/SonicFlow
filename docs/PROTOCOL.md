@@ -18,7 +18,7 @@ The choice is saved to `~/Library/Application Support/SonicFlow/config.json` and
 
 | Frame | Shape | Notes |
 |---|---|---|
-| text | `{"type": "start", "app": "<bundle id>?", "dictionary": [...]?, "snippets": [...]?}` | Opens an utterance |
+| text | `{"type": "start", "app": "<bundle id>?", "style": "<style>"?, "dictionary": [...]?, "snippets": [...]?}` | Opens an utterance |
 | binary | PCM16 LE, mono, 16 kHz | Any chunk size; 100 ms (3200 bytes) recommended |
 | text | `{"type": "stop"}` | Hotkey released; finalize now |
 
@@ -31,6 +31,10 @@ The choice is saved to `~/Library/Application Support/SonicFlow/config.json` and
 | `{"type": "error", "message": "..."}` | Protocol misuse; session stays open |
 
 `raw` is the ASR output; `text` is what the client pastes. `timings` are measured from receipt of `stop`.
+
+## Styles
+
+`style` formats the cleaned text without a model call: `standard` (default) leaves it as is, `casual` drops the final period, and `lowercase` also starts each sentence in lowercase, keeping "I" and dictionary terms. Unknown values act as `standard`. The client picks the style from the app being dictated into.
 
 ## Dictionary and snippets
 

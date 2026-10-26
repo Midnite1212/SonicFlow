@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from sonicflow.backends.base import ASRBackend, ASRStream, CleanupBackend, CleanupContext
 from sonicflow.backends.registry import ASR_BACKENDS, CLEANUP_BACKENDS, create_asr, create_cleanup
 from sonicflow.config import Settings, save_backend_choice
+from sonicflow.style import apply_style
 from sonicflow.vocabulary import Vocabulary, common_words
 
 logger = logging.getLogger(__name__)
@@ -126,6 +127,7 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
         cleanup = engine.cleanup
         context = CleanupContext()
         vocabulary = Vocabulary()
+        style: str | None = None
 
         async def send_error(message: str) -> None:
             await ws.send_json({"type": "error", "message": message})
@@ -152,6 +154,7 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
                         cleanup = engine.cleanup
                         engine.warm_in_background()
                         vocabulary = Vocabulary.from_event(event)
+                        style = event.get("style")
                         context = CleanupContext(
                             app_bundle_id=event.get("app"),
                             dictionary=tuple(term.term for term in vocabulary.terms),
@@ -169,7 +172,10 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
                             spoken = vocabulary.correct(raw)
                             cleaned = await engine.run(cleanup.clean, spoken, context)
                             # Corrected again in case cleanup re-cased a term.
-                            text = vocabulary.expand(vocabulary.correct(cleaned))
+                            styled = apply_style(
+                                vocabulary.correct(cleaned), style, frozenset(context.dictionary)
+                            )
+                            text = vocabulary.expand(styled)
                         done_at = time.perf_counter()
                         stream = None
                         await ws.send_json(

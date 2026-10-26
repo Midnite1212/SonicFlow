@@ -29,7 +29,8 @@ public struct Snippet: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-/// The `start` message: the app being dictated into plus the user's dictionary and snippets.
+/// The `start` message: the app being dictated into, its style, and the user's dictionary and
+/// snippets.
 public enum StartMessage {
     private struct Payload: Encodable {
         struct Term: Encodable {
@@ -44,13 +45,17 @@ public enum StartMessage {
 
         let type = "start"
         let app: String?
+        let style: WritingStyle
         let dictionary: [Term]
         let snippets: [Shortcut]
     }
 
-    public static func json(app: String?, dictionary: [DictionaryTerm], snippets: [Snippet]) -> String {
+    public static func json(
+        app: String?, style: WritingStyle = .standard, dictionary: [DictionaryTerm], snippets: [Snippet]
+    ) -> String {
         let payload = Payload(
             app: app,
+            style: style,
             dictionary: dictionary
                 .map { Payload.Term(term: $0.term.trimmingCharacters(in: .whitespaces), heard: $0.heard) }
                 .filter { !$0.term.isEmpty },

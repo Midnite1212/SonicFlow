@@ -25,7 +25,7 @@ final class DictationController {
     private(set) var history = History()
     private(set) var stats = Storage.load(UsageStats.self, from: Storage.statsFile) ?? UsageStats()
     let settings = AppSettings()
-    let vocabulary = VocabularyStore()
+    let personalization = Personalization()
 
     var statusLine: String {
         switch state {
@@ -177,7 +177,8 @@ final class DictationController {
             }
             return
         }
-        engine.begin(vocabulary.startMessage(app: NSWorkspace.shared.frontmostApplication?.bundleIdentifier))
+        let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        engine.begin(personalization.startMessage(app: app))
         let micStart = ProcessInfo.processInfo.systemUptime
         do {
             try audio.start()

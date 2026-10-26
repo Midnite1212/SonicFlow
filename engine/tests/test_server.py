@@ -83,6 +83,15 @@ def test_dictionary_corrects_before_cleanup_and_snippet_expands():
     assert final["text"] == "Ship SonicFlow, then Thanks, R"
 
 
+def test_style_applies_after_cleanup_and_keeps_terms():
+    final = dictate(
+        ScriptedASR("Priya says hi. Sounds good."),
+        PassthroughCleanup(),
+        {"style": "lowercase", "dictionary": ["Priya"]},
+    )
+    assert final["text"] == "Priya says hi. sounds good"
+
+
 def test_whole_utterance_snippet_skips_cleanup():
     cleanup = RecordingCleanup()
     final = dictate(

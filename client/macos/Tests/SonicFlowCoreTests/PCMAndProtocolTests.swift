@@ -42,10 +42,10 @@ import Testing
         snippets: [Snippet(trigger: "my email", text: "r@example.com"), Snippet(trigger: "empty")]
     )
     #expect(
-        json == #"{"app":"com.tinyspeck.slackmacgap","dictionary":[{"heard":["sonic flow","sonic flo"],"term":"SonicFlow"}],"snippets":[{"text":"r@example.com","trigger":"my email"}],"type":"start"}"#
+        json == #"{"app":"com.tinyspeck.slackmacgap","dictionary":[{"heard":["sonic flow","sonic flo"],"term":"SonicFlow"}],"snippets":[{"text":"r@example.com","trigger":"my email"}],"style":"standard","type":"start"}"#
     )
 }
 
 @Test func startMessageWithoutAppOmitsIt() {
-    #expect(StartMessage.json(app: nil, dictionary: [], snippets: []) == #"{"dictionary":[],"snippets":[],"type":"start"}"#)
+    #expect(StartMessage.json(app: nil, dictionary: [], snippets: []) == #"{"dictionary":[],"snippets":[],"style":"standard","type":"start"}"#)
 }
