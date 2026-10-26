@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let controller = DictationController()
+    let settingsModel = SettingsModel()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         controller.start()
@@ -19,6 +20,9 @@ struct SonicFlowApp: App {
             MenuContent(controller: appDelegate.controller)
         } label: {
             Image(systemName: appDelegate.controller.state.symbolName)
+        }
+        Settings {
+            SettingsView(settings: appDelegate.controller.settings, model: appDelegate.settingsModel)
         }
     }
 }
@@ -45,6 +49,8 @@ struct MenuContent: View {
             }
         }
         Divider()
+        SettingsLink { Text("Settings…") }
+            .keyboardShortcut(",")
         Button("Quit SonicFlow") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }

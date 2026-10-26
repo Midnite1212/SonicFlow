@@ -16,6 +16,7 @@
   - [x] Warm-up on hotkey press removes the idle penalty (#14)
   - [x] Swift menu-bar app: hold Option, pill with live waveform, paste (#19)
   - [x] Instant capture with a warm mic and 200 ms pre-roll (#20)
+  - [x] Settings window: hotkey, mode, microphone, models, launch at login (#28)
 - [ ] v0.5 Engine as a launchd daemon; optional LAN bind so the Mac Studio serves the laptop
   - [x] LaunchAgent with `sonicflow-service`, engine deployed to Application Support (#17)
   - [x] Switch models at runtime, choice saved in config.json (#25)

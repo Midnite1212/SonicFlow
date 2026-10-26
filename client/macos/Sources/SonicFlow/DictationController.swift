@@ -22,17 +22,22 @@ final class DictationController {
     private(set) var lastLatencyMs: Double?
     private(set) var permissions = Permissions.current()
     private(set) var hotkeyActive = false
+    let settings = AppSettings()
 
     var statusLine: String {
         switch state {
         case .offline: "Engine offline"
-        case .idle: "Ready — hold Option to dictate"
+        case .idle:
+            settings.talkMode == .hold
+                ? "Ready — hold \(settings.hotkey.title) to dictate"
+                : "Ready — tap \(settings.hotkey.title) to dictate"
         case .listening: "Listening…"
         case .processing: "Processing…"
         }
     }
 
-    @ObservationIgnored private let hold = HoldToTalk()
+    @ObservationIgnored private var gesture: TalkGesture = HoldToTalk()
+    @ObservationIgnored private var gestureMode = TalkMode.hold
     @ObservationIgnored private let audio = AudioCapture()
     @ObservationIgnored private let engine = EngineClient(
         url: URL(string: "ws://127.0.0.1:8765/v1/dictate")!
@@ -54,7 +59,8 @@ final class DictationController {
             Task { @MainActor in self?.pill.model.push(level) }
         }
         engine.connect()
-        applyMicrophonePreference()
+        settings.onChange = { [weak self] in self?.applySettings() }
+        applySettings()
         installHotkey()
 
         // Grants made in System Settings don't notify the app, so poll until everything is allowed.
@@ -63,9 +69,20 @@ final class DictationController {
         }
     }
 
+    private func applySettings() {
+        if gestureMode != settings.talkMode {
+            if state == .listening { endDictation(deliver: false, reason: "mode changed") }
+            gesture = makeTalkGesture(settings.talkMode)
+            gestureMode = settings.talkMode
+        }
+        hotkey?.hotkey = settings.hotkey
+        audio.setInputDevice(uid: settings.inputDeviceUID)
+        applyMicrophonePreference()
+    }
+
     private func applyMicrophonePreference() {
         guard permissions.microphone else { return }
-        let warm = Preferences.keepMicrophoneReady
+        let warm = settings.keepMicrophoneReady
         if audio.keepWarm != warm {
             audio.setKeepWarm(warm)
             Log.event("microphone \(warm ? "kept ready" : "started on press")")
@@ -85,7 +102,7 @@ final class DictationController {
     /// Either Input Monitoring or Accessibility lets the tap start, so the tap is the real check.
     private func installHotkey() {
         guard hotkey == nil else { return }
-        let monitor = HotkeyMonitor { [weak self] input in
+        let monitor = HotkeyMonitor(hotkey: settings.hotkey) { [weak self] input in
             Task { @MainActor in self?.handle(input) }
         }
         guard monitor.start() else {
@@ -106,17 +123,23 @@ final class DictationController {
     }
 
     private func handle(_ input: HotkeyMonitor.Input) {
-        let event: HoldToTalk.Event? =
+        let event: TalkEvent? =
             switch input {
-            case let .hotkeyDown(time): hold.hotkeyDown(at: time)
-            case let .hotkeyUp(time): hold.hotkeyUp(at: time)
-            case .other: hold.otherInput()
+            case let .hotkeyDown(time): gesture.hotkeyDown(at: time)
+            case let .hotkeyUp(time): gesture.hotkeyUp(at: time)
+            case .escape: gesture.escape()
+            case .other: gesture.otherInput()
             }
         switch event {
         case .start: beginDictation()
         case .stop: endDictation(deliver: true, reason: nil)
         case .cancel:
-            let reason = if case .other = input { "other input" } else { "short tap" }
+            let reason =
+                switch input {
+                case .escape: "escape"
+                case let .other(detail): "other input (\(detail))"
+                default: "short tap"
+                }
             endDictation(deliver: false, reason: reason)
         case nil: break
         }
