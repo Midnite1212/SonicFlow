@@ -13,6 +13,8 @@ The engine shipped four hard-coded models and kept itself offline with `HF_HUB_O
 - Loading is local-only by construction: every backend resolves its files through `models.local_path`, which uses `local_files_only=True` and fails with "not downloaded" rather than fetching.
 - The only network calls are ones the user starts: `POST /v1/models/download`, `sonicflow-models download`, and reading a repo's metadata when adding it. Downloads run on their own thread, never on the inference thread, and use plain HTTP (`HF_HUB_DISABLE_XET=1`) so progress can be measured from the growing file.
 - Added models must be MLX builds; PyTorch checkpoints are refused with a pointer to an MLX build.
+- Models pulled in Ollama can be cleanup models (family `ollama`), reached on loopback (`127.0.0.1:11434`) with the same prompt, sentence routing and rewrite guard as MLX models. SonicFlow lists and uses them but never pulls or deletes them.
+- Searching Hugging Face is a user-started request like a download; results are filtered to MLX builds of the requested kind.
 
 ## Consequences
 

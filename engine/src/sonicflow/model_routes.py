@@ -32,6 +32,7 @@ class ModelRef(BaseModel):
 
 class NewModel(BaseModel):
     source: str
+    family: str | None = None
     title: str | None = None
 
 
@@ -56,7 +57,46 @@ def inspect_hub_repo(repo: str) -> tuple[str, int]:
     return family, size
 
 
+def new_ollama_model(name: str, title: str | None) -> Model:
+    from sonicflow.backends.ollama import OllamaUnavailable, pulled_models
+
+    try:
+        pulled = {m["name"]: m["size"] for m in pulled_models()}
+    except OllamaUnavailable as error:
+        raise ValueError(str(error)) from None
+    if name not in pulled:
+        raise ValueError(f"{name} is not pulled in Ollama; run `ollama pull {name}` first")
+    return Model(
+        custom_id("ollama", name), "cleanup", "ollama", name, title or name, "custom", pulled[name]
+    )
+
+
+HUB_FAMILIES = (("whisper", "whisper"), ("parakeet", "parakeet"))
+
+
+def search_hub(query: str, kind: str, limit: int = 30) -> list[dict]:
+    """MLX models on Hugging Face matching `query`, most downloaded first."""
+    from huggingface_hub import HfApi
+
+    results = []
+    for info in HfApi().list_models(search=query, filter="mlx", sort="downloads", limit=limit * 3):
+        repo = info.id
+        family = next((f for key, f in HUB_FAMILIES if key in repo.lower()), None)
+        if family is None and info.pipeline_tag == "text-generation":
+            family = "mlx-lm"
+        if family is None or FAMILY_KIND[family] != kind:
+            continue
+        results.append(
+            {"source": repo, "family": family, "kind": kind, "downloads": info.downloads}
+        )
+        if len(results) == limit:
+            break
+    return results
+
+
 def new_custom_model(request: NewModel) -> Model:
+    if request.family == "ollama":
+        return new_ollama_model(request.source.strip(), request.title)
     source = request.source.strip()
     folder = Path(source).expanduser()
     if folder.is_absolute() or source.startswith("~"):
@@ -94,14 +134,13 @@ def model_router(engine: "Engine", downloads: Downloads) -> APIRouter:
             "models": [
                 {**m.to_dict(), "installed": is_installed(m), "download": jobs.get(m.id)}
                 for m in all_models()
-                if m.family != "ollama"
             ],
         }
 
     @router.post("/download", status_code=202)
     def download(ref: ModelRef) -> dict:
         model = find(ref.id)
-        if model is None or model.family == "builtin" or model.is_local_folder:
+        if model is None or model.family in ("builtin", "ollama") or model.is_local_folder:
             raise HTTPException(400, f"{ref.id} is not a downloadable model")
         return downloads.start(model).__dict__
 
@@ -125,11 +164,34 @@ def model_router(engine: "Engine", downloads: Downloads) -> APIRouter:
             raise HTTPException(409, "switch to another model before removing this one")
         if model.group == "recommended" and model.family == "builtin":
             raise HTTPException(400, f"{ref.id} has no files to remove")
-        if not model.is_local_folder:
+        if not model.is_local_folder and model.family != "ollama":
             remove_download(model.source)
         downloads.forget(model.id)
         if model.group == "custom":
             save_custom([m for m in load_custom() if m.id != model.id])
         return {"removed": model.id}
+
+    @router.get("/search")
+    def search(q: str, kind: str = "cleanup") -> dict:
+        """Asks Hugging Face, so it only runs when the user searches."""
+        if kind not in ("asr", "cleanup"):
+            raise HTTPException(400, "kind must be asr or cleanup")
+        try:
+            results = search_hub(q, kind)
+        except Exception as error:
+            raise HTTPException(502, f"could not reach Hugging Face: {error}") from None
+        known = {m.source for m in all_models()}
+        return {"results": [{**r, "added": r["source"] in known} for r in results]}
+
+    @router.get("/ollama")
+    def ollama() -> dict:
+        from sonicflow.backends.ollama import OllamaUnavailable, pulled_models
+
+        try:
+            pulled = pulled_models()
+        except OllamaUnavailable:
+            return {"running": False, "models": []}
+        added = {m.source for m in all_models() if m.family == "ollama"}
+        return {"running": True, "models": [{**m, "added": m["name"] in added} for m in pulled]}
 
     return router
