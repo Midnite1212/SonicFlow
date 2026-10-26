@@ -23,6 +23,7 @@ final class DictationController {
     private(set) var permissions = Permissions.current()
     private(set) var hotkeyActive = false
     private(set) var history = History()
+    private(set) var stats = Storage.load(UsageStats.self, from: Storage.statsFile) ?? UsageStats()
     let settings = AppSettings()
 
     var statusLine: String {
@@ -49,8 +50,16 @@ final class DictationController {
     @ObservationIgnored private let pill = PillController()
     @ObservationIgnored private var hotkey: HotkeyMonitor?
     @ObservationIgnored private var connected = false
+    @ObservationIgnored private var startedAt: TimeInterval = 0
     @ObservationIgnored private var releasedAt: TimeInterval = 0
     @ObservationIgnored private var permissionTimer: Timer?
+
+    init() {
+        if settings.saveHistory, let saved = Storage.load(History.self, from: Storage.historyFile) {
+            history = History(entries: saved.entries)
+            history.prune(keeping: settings.historyRetention)
+        }
+    }
 
     func start() {
         Permissions.requestMissing()
@@ -82,6 +91,16 @@ final class DictationController {
         hotkey?.hotkey = settings.hotkey
         audio.setInputDevice(uid: settings.inputDeviceUID)
         applyMicrophonePreference()
+        persistHistory()
+    }
+
+    private func persistHistory() {
+        guard settings.saveHistory else {
+            Storage.remove(Storage.historyFile)
+            return
+        }
+        history.prune(keeping: settings.historyRetention)
+        Storage.save(history, to: Storage.historyFile)
     }
 
     private func applyMicrophonePreference() {
@@ -169,6 +188,7 @@ final class DictationController {
         }
         let micStartMs = Int((ProcessInfo.processInfo.systemUptime - micStart) * 1000)
         Log.event("dictation started; mic ready in \(micStartMs) ms")
+        startedAt = ProcessInfo.processInfo.systemUptime
         state = .listening
         NSSound(named: "Tink")?.play()
         pill.show()
@@ -208,7 +228,16 @@ final class DictationController {
         case let .final(_, text, _):
             let latency = (ProcessInfo.processInfo.systemUptime - releasedAt) * 1000
             lastLatencyMs = latency
-            history.record(text, latencyMs: latency)
+            if !text.isEmpty {
+                let app = NSWorkspace.shared.frontmostApplication?.localizedName
+                history.record(text, latencyMs: latency, appName: app)
+                stats.record(
+                    words: History.wordCount(text), speakingSeconds: releasedAt - startedAt,
+                    latencyMs: latency
+                )
+                Storage.save(stats, to: Storage.statsFile)
+                if settings.saveHistory { persistHistory() }
+            }
             Log.event("dictation delivered in \(Int(latency)) ms, \(text.count) chars")
             if !text.isEmpty { Paster.paste(text) }
         case let .error(message):
@@ -224,7 +253,13 @@ final class DictationController {
         NSPasteboard.general.setString(entry.text, forType: .string)
     }
 
+    func deleteFromHistory(_ entry: History.Entry) {
+        history.remove(entry.id)
+        persistHistory()
+    }
+
     func clearHistory() {
         history.clear()
+        persistHistory()
     }
 }

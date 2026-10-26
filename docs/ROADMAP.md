@@ -20,6 +20,8 @@
   - [x] Settings window: hotkey, mode, microphone, models, launch at login (#28)
   - [x] Recover from dead mic input; silent dictations are cancelled (#31)
   - [x] Recent dictations in the menu, memory only, click to copy (#33)
+  - [x] App icon (#40)
+  - [x] App window with Home, History and Settings; onboarding; opt-in saved history (#42)
 - [ ] v0.5 Engine as a launchd daemon; optional LAN bind so the Mac Studio serves the laptop
   - [x] LaunchAgent with `sonicflow-service`, engine deployed to Application Support (#17)
   - [x] Switch models at runtime, choice saved in config.json (#25)
