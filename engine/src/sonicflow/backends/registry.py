@@ -31,10 +31,17 @@ def _mlx_lm(name: str, source: str) -> CleanupBackend:
     return LLMCleanup(name, source)
 
 
+def _ollama(name: str, source: str) -> CleanupBackend:
+    from sonicflow.backends.ollama import OllamaCleanup
+
+    return OllamaCleanup(name, source)
+
+
 FAMILIES: dict[str, Callable[[str, str], ASRBackend | CleanupBackend]] = {
     "parakeet": _parakeet,
     "whisper": _whisper,
     "mlx-lm": _mlx_lm,
+    "ollama": _ollama,
 }
 
 # Backends that are not model files; tests also register fakes here.

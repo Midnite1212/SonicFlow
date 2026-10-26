@@ -365,8 +365,15 @@ def _has_weights(folder: Path) -> bool:
 
 
 def is_installed(model: Model) -> bool:
-    if model.family in ("builtin", "ollama"):
+    if model.family == "builtin":
         return True
+    if model.family == "ollama":
+        from sonicflow.backends.ollama import OllamaUnavailable, pulled_models
+
+        try:
+            return model.source in {m["name"] for m in pulled_models()}
+        except OllamaUnavailable:
+            return False
     try:
         local_path(model.source)
     except ModelNotDownloaded:

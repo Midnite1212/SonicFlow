@@ -154,3 +154,30 @@ def test_snapshot_without_weights_is_not_installed(tmp_path, monkeypatch):
         local_path("org/partial")
     (snapshot / "model.safetensors").write_bytes(b"x")
     assert local_path("org/partial") == str(snapshot)
+
+
+def test_search_filters_by_kind_and_marks_added(client, monkeypatch):
+    class Info:
+        def __init__(self, id, pipeline_tag=None, downloads=0):
+            self.id, self.pipeline_tag, self.downloads = id, pipeline_tag, downloads
+
+    class FakeApi:
+        def list_models(self, **kwargs):
+            assert kwargs["filter"] == "mlx"
+            return [
+                Info("mlx-community/whisper-small-mlx", None, 90),
+                Info("mlx-community/Qwen3-0.6B-4bit", "text-generation", 40),
+                Info("someone/image-model", "image-classification", 5),
+            ]
+
+    monkeypatch.setattr("huggingface_hub.HfApi", FakeApi)
+    with client:
+        asr = client.get("/v1/models/search", params={"q": "small", "kind": "asr"}).json()[
+            "results"
+        ]
+        cleanup = client.get("/v1/models/search", params={"q": "qwen"}).json()["results"]
+        assert client.get("/v1/models/search", params={"q": "x", "kind": "tts"}).status_code == 400
+    assert [(r["source"], r["family"], r["added"]) for r in asr] == [
+        ("mlx-community/whisper-small-mlx", "whisper", True)
+    ]
+    assert [r["source"] for r in cleanup] == ["mlx-community/Qwen3-0.6B-4bit"]

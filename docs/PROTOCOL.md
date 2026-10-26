@@ -19,6 +19,9 @@ One WebSocket session per client; one utterance at a time per session.
 | `GET /v1/models` | `{"active": {"asr", "cleanup"}, "models": [{id, kind, family, source, title, group, size_bytes, note, bench, installed, download}]}`; `group` is `recommended`, `catalog` or `custom` |
 | `POST /v1/models/download` with `{"id"}` | `202`; the download runs in the background. Progress appears in each model's `download`: `{state, bytes, total_bytes, error}` |
 | `POST /v1/models/custom` with `{"source", "title"?}` | The new model. `source` is a Hugging Face repo (`org/name`, MLX builds only) or an absolute folder with `config.json` and `.safetensors`; the family is detected. `400` with a reason otherwise |
+| `GET /v1/models/search?q=&kind=asr\|cleanup` | `{"results": [{source, family, kind, downloads, added}]}`: MLX models on Hugging Face, most downloaded first. Contacts Hugging Face, so clients call it only when the user searches; `502` if unreachable |
+| `GET /v1/models/ollama` | `{"running": bool, "models": [{name, size, added}]}` from the local Ollama app |
+| `POST /v1/models/custom` with `{"source": "<ollama model>", "family": "ollama"}` | Adds a model Ollama has pulled as a cleanup model (id `ollama:<name>`); `400` if Ollama is not running or the model is not pulled |
 | `POST /v1/models/remove` with `{"id"}` | Deletes downloaded files and forgets a custom model (local folders stay on disk). `409` for an active model |
 
 Any installed model id, or `family:source`, is accepted by `POST /v1/config`. The choice is saved to `~/Library/Application Support/SonicFlow/config.json` and used on the next start; `SONICFLOW_ASR` / `SONICFLOW_CLEANUP` override it.
