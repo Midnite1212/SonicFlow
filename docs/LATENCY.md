@@ -52,3 +52,7 @@ The same deployed engine answers ~20–30 ms slower on short clips under launchd
 ### Cleanup prompt v2
 
 The 20-item corpus adds corrections with leading words and literal uses of "like" / "you know". Before the prompt change, qwen3-1.7b answered a dictated question ("Do you know when the release is planned?" → "The release is planned for next week."). Prompt v2 says the text is never addressed to the model and keeps every word outside the retracted span, and `accept_rewrite` rejects rewrites with more than ~20% words that were never spoken. With it, qwen3-4b gets every item right; qwen3-1.7b still keeps a retracted name ("Please call Sam") and a filler "like", so 4B is the default (#23).
+
+### Sentence-level cleanup
+
+Only sentences `needs_llm()` flags go to the LLM (a correction travels with the sentence it retracts, and a bare "Scratch that." also takes the next one). On the 21-item corpus with qwen3-4b the output is identical to whole-text cleanup (2.67% clean WER) while a 330-character passage with one correction drops from 1,702 ms to 297 ms of cleanup (#36).

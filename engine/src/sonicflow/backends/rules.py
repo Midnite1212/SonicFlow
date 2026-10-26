@@ -22,8 +22,46 @@ _SELF_CORRECTION = re.compile(
 _AMBIGUOUS_FILLERS = re.compile(r"\b(?:like|you know|kind of|sort of)\b", re.IGNORECASE)
 
 
+_OPENS_WITH_CORRECTION = re.compile(
+    r"^(?:no,? wait|wait,? no|sorry|i mean|scratch that|actually|make that|or rather|correction)\b",
+    re.IGNORECASE,
+)
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+
+
 def needs_llm(text: str) -> bool:
     return bool(_SELF_CORRECTION.search(text) or _AMBIGUOUS_FILLERS.search(text))
+
+
+def plan_rewrites(text: str) -> list[tuple[str, bool]]:
+    """Splits text into consecutive spans, flagging the ones the LLM must rewrite.
+
+    Only flagged sentences pay for the LLM. A sentence that opens with a correction ("No wait,
+    Thursday.") retracts something in the sentence before it, so the two travel together; a bare
+    "Scratch that." also takes the sentence after it, which holds the replacement.
+    """
+    units: list[tuple[str, bool]] = []
+    awaiting_replacement = False
+    for sentence in _SENTENCE_END.split(text.strip()):
+        if not sentence:
+            continue
+        flagged = needs_llm(sentence)
+        correction = _OPENS_WITH_CORRECTION.match(sentence) if flagged else None
+        if awaiting_replacement or (correction and units):
+            previous, _ = units.pop()
+            units.append((f"{previous} {sentence}", True))
+        else:
+            units.append((sentence, flagged))
+        # "Scratch that." on its own: the replacement is in the next sentence.
+        awaiting_replacement = bool(correction) and not sentence[correction.end() :].strip(" ,.!?")
+
+    spans: list[tuple[str, bool]] = []
+    for unit, flagged in units:
+        if spans and spans[-1][1] == flagged:
+            previous, _ = spans.pop()
+            unit = f"{previous} {unit}"
+        spans.append((unit, flagged))
+    return spans
 
 
 def _tidy_punctuation(text: str) -> str:
