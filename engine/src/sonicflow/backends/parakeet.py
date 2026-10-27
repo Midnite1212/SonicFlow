@@ -5,6 +5,7 @@ from parakeet_mlx.audio import get_logmel
 
 from sonicflow.backends.base import ASRBackend
 from sonicflow.models import local_path
+from sonicflow.speech import is_unsure_fragment
 
 
 class ParakeetASR(ASRBackend):
@@ -27,4 +28,8 @@ class ParakeetASR(ASRBackend):
         if len(audio) < config.hop_length:
             return ""
         mel = get_logmel(mx.array(audio), config)
-        return self._model.generate(mel)[0].text.strip()
+        result = self._model.generate(mel)[0]
+        text = result.text.strip()
+        if is_unsure_fragment(text, [token.confidence for token in result.tokens]):
+            return ""
+        return text
