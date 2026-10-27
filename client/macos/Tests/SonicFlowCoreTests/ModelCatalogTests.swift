@@ -20,8 +20,9 @@ private let listJSON = #"""
   "title": "llama3.2:3b", "group": "custom", "size_bytes": null, "note": "", "bench": null,
   "installed": false, "download": null},
  {"id": "qwen3-1.7b", "kind": "cleanup", "family": "mlx-lm", "source": "mlx-community/Qwen3-1.7B-4bit",
-  "title": "Qwen3 1.7B", "group": "recommended", "size_bytes": 980000000, "note": "", "bench": null,
-  "installed": true, "download": null}
+  "title": "Qwen3 1.7B", "group": "recommended", "size_bytes": 980000000, "note": "",
+  "bench": {"p50_ms": 241, "wer": 0.021, "local": true}, "installed": true, "download": null,
+  "benchmark": {"model_id": "qwen3-1.7b", "state": "done", "error": null}}
 ]}
 """#
 
@@ -30,7 +31,10 @@ private let listJSON = #"""
     #expect(list.models(in: .recommended, kind: .asr).map(\.id) == ["parakeet-v2"])
     #expect(list.models(in: .catalog, kind: .asr).count == 2)
     #expect(list.model("parakeet-v2")?.bench?.p50Ms == 115)
-    #expect(list.isDownloading)
+    #expect(list.model("parakeet-v2")?.bench?.isLocal == false)
+    #expect(list.model("qwen3-1.7b")?.bench?.isLocal == true)
+    #expect(list.model("qwen3-1.7b")?.benchmark?.isRunning == false)
+    #expect(list.isWorking)
 }
 
 @Test func rowActionsFollowState() throws {

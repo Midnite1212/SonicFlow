@@ -22,8 +22,9 @@ public struct ModelList: Decodable, Equatable, Sendable {
         models.first { $0.id == id }
     }
 
-    public var isDownloading: Bool {
-        models.contains { $0.download?.isRunning ?? false }
+    /// Downloads and benchmarks report progress only when polled.
+    public var isWorking: Bool {
+        models.contains { ($0.download?.isRunning ?? false) || ($0.benchmark?.isRunning ?? false) }
     }
 }
 
@@ -34,6 +35,17 @@ public struct ModelInfo: Decodable, Equatable, Identifiable, Sendable {
     public struct Bench: Decodable, Equatable, Sendable {
         public let p50Ms: Double
         public let wer: Double
+        private let local: Bool?
+
+        /// Measured on this Mac rather than shipped with SonicFlow.
+        public var isLocal: Bool { local ?? false }
+    }
+
+    public struct Benchmark: Decodable, Equatable, Sendable {
+        public let state: String
+        public let error: String?
+
+        public var isRunning: Bool { state == "queued" || state == "running" }
     }
 
     public struct Download: Decodable, Equatable, Sendable {
@@ -61,6 +73,7 @@ public struct ModelInfo: Decodable, Equatable, Identifiable, Sendable {
     public let bench: Bench?
     public let installed: Bool
     public let download: Download?
+    public let benchmark: Benchmark?
 
     public var isLocalFolder: Bool { source.hasPrefix("/") }
     public var hasFiles: Bool { family != "builtin" }

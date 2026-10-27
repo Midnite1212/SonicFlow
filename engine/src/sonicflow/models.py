@@ -21,7 +21,7 @@ FAMILY_KIND: dict[str, Kind] = {
 
 @dataclass(frozen=True)
 class Bench:
-    """Measured on an M3 Pro over the 22-item corpus; see docs/LATENCY.md."""
+    """Measured on an M3 Pro over the 21-item corpus; see docs/LATENCY.md."""
 
     p50_ms: int
     wer: float

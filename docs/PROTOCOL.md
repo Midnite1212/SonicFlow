@@ -16,8 +16,9 @@ One WebSocket session per client; one utterance at a time per session.
 
 | Request | Response |
 |---|---|
-| `GET /v1/models` | `{"active": {"asr", "cleanup"}, "models": [{id, kind, family, source, title, group, size_bytes, note, bench, installed, download}]}`; `group` is `recommended`, `catalog` or `custom` |
+| `GET /v1/models` | `{"active": {"asr", "cleanup"}, "models": [{id, kind, family, source, title, group, size_bytes, note, bench, installed, download, benchmark}]}`; `group` is `recommended`, `catalog` or `custom`. `bench` is `{p50_ms, wer}`, plus `"local": true` when measured on this Mac |
 | `POST /v1/models/download` with `{"id"}` | `202`; the download runs in the background. Progress appears in each model's `download`: `{state, bytes, total_bytes, error}` |
+| `POST /v1/models/bench` with `{"id"}` | `202`; times an installed model over the bench corpus in a subprocess (ASR models alone, cleanup models behind the active ASR model). Progress appears in each model's `benchmark`: `{state, error}`; the result replaces its `bench`. `400` if not installed |
 | `POST /v1/models/custom` with `{"source", "title"?}` | The new model. `source` is a Hugging Face repo (`org/name`, MLX builds only) or an absolute folder with `config.json` and `.safetensors`; the family is detected. `400` with a reason otherwise |
 | `GET /v1/models/search?q=&kind=asr\|cleanup` | `{"results": [{source, family, kind, downloads, added}]}`: MLX models on Hugging Face, most downloaded first. Contacts Hugging Face, so clients call it only when the user searches; `502` if unreachable |
 | `GET /v1/models/ollama` | `{"running": bool, "models": [{name, size, added}]}` from the local Ollama app |

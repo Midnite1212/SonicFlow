@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from sonicflow.benchmarks import Benchmarks, measured
 from sonicflow.downloads import Downloads, remove_download
 from sonicflow.models import (
     FAMILY_KIND,
@@ -123,18 +124,23 @@ def new_custom_model(request: NewModel) -> Model:
     )
 
 
-def model_router(engine: "Engine", downloads: Downloads) -> APIRouter:
+def model_entry(model: Model, local: dict, jobs: dict, benches: dict) -> dict:
+    """A model as the client lists it; a benchmark taken on this Mac replaces the shipped one."""
+    data = {**model.to_dict(), "installed": is_installed(model), "download": jobs.get(model.id)}
+    if (bench := local.get(model.id)) is not None:
+        data["bench"] = {"p50_ms": bench.p50_ms, "wer": bench.wer, "local": True}
+    return {**data, "benchmark": benches.get(model.id)}
+
+
+def model_router(engine: "Engine", downloads: Downloads, benchmarks: Benchmarks) -> APIRouter:
     router = APIRouter(prefix="/v1/models")
 
     @router.get("")
     def list_models() -> dict:
-        jobs = downloads.status()
+        local, jobs, benches = measured(), downloads.status(), benchmarks.status()
         return {
             "active": {"asr": engine.asr.name, "cleanup": engine.cleanup.name},
-            "models": [
-                {**m.to_dict(), "installed": is_installed(m), "download": jobs.get(m.id)}
-                for m in all_models()
-            ],
+            "models": [model_entry(m, local, jobs, benches) for m in all_models()],
         }
 
     @router.post("/download", status_code=202)
@@ -143,6 +149,14 @@ def model_router(engine: "Engine", downloads: Downloads) -> APIRouter:
         if model is None or model.family in ("builtin", "ollama") or model.is_local_folder:
             raise HTTPException(400, f"{ref.id} is not a downloadable model")
         return downloads.start(model).__dict__
+
+    @router.post("/bench", status_code=202)
+    def bench(ref: ModelRef) -> dict:
+        """Times the model over the bench corpus on this Mac, in a subprocess."""
+        model = find(ref.id)
+        if model is None or not is_installed(model):
+            raise HTTPException(400, f"{ref.id} is not installed")
+        return benchmarks.start(model, engine.asr.name).__dict__
 
     @router.post("/custom")
     def add_custom(request: NewModel) -> dict:
