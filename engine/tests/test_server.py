@@ -192,3 +192,12 @@ def test_failed_load_keeps_current_backend(switchable):
 def test_unknown_backend_is_rejected(switchable):
     with switchable as client:
         assert client.post("/v1/config", json={"asr": "nope"}).status_code == 400
+
+
+def test_noise_transcripts_deliver_nothing():
+    cleanup = RecordingCleanup()
+    for transcript in ("Mm-hmm.", ""):
+        final = dictate(ScriptedASR(transcript), cleanup, {})
+        assert final["text"] == ""
+        assert final["raw"] == ""
+    assert cleanup.seen == []

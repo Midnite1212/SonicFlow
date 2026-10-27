@@ -18,6 +18,7 @@ from sonicflow.config import Settings, save_backend_choice
 from sonicflow.downloads import Downloads
 from sonicflow.model_routes import model_router
 from sonicflow.models import ModelNotDownloaded
+from sonicflow.speech import is_filler
 from sonicflow.style import apply_style
 from sonicflow.vocabulary import Vocabulary, common_words
 
@@ -152,6 +153,8 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
                     return vocabulary.correct(await engine.run(cleanup.edit, selection, raw))
                 except NotImplementedError as error:
                     raise CommandError(str(error)) from None
+            if not raw.strip():
+                return ""
             if (snippet := vocabulary.snippet_for(raw)) is not None:
                 return snippet
             cleaned = await engine.run(cleanup.clean, vocabulary.correct(raw), context)
@@ -192,6 +195,8 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
                             continue
                         stopped_at = time.perf_counter()
                         raw = await engine.run(stream.finalize)
+                        if is_filler(raw):
+                            raw = ""
                         asr_done_at = time.perf_counter()
                         stream = None
                         try:
