@@ -56,6 +56,7 @@ final class DictationController {
     @ObservationIgnored private var startedAt: TimeInterval = 0
     @ObservationIgnored private var releasedAt: TimeInterval = 0
     @ObservationIgnored private var permissionTimer: Timer?
+    @ObservationIgnored private var pasteShortcut: PasteShortcut?
 
     init() {
         if settings.saveHistory, let saved = Storage.load(History.self, from: Storage.historyFile) {
@@ -66,6 +67,9 @@ final class DictationController {
 
     func start() {
         Permissions.requestMissing()
+        pasteShortcut = PasteShortcut { [weak self] in
+            Task { @MainActor in self?.pasteLast() }
+        }
 
         engine.onConnectionChange = { [weak self] isConnected in
             Task { @MainActor in self?.connectionChanged(isConnected) }
@@ -285,6 +289,23 @@ final class DictationController {
             NSSound.beep()
         case .partial:
             break
+        }
+    }
+
+    /// Pastes the newest dictation again once the shortcut's modifiers are released, so they don't
+    /// combine with the synthesized ⌘V.
+    func pasteLast() {
+        guard let text = history.entries.first?.text else {
+            NSSound.beep()
+            return
+        }
+        Task { @MainActor in
+            let held: CGEventFlags = [.maskControl, .maskAlternate, .maskShift, .maskCommand]
+            for _ in 0..<50 where !CGEventSource.flagsState(.combinedSessionState).isDisjoint(with: held) {
+                try? await Task.sleep(for: .milliseconds(20))
+            }
+            Paster.paste(text)
+            Log.event("pasted last dictation, \(text.count) chars")
         }
     }
 

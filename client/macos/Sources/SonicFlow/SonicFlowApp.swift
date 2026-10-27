@@ -49,6 +49,9 @@ struct MenuContent: View {
         if let latency = controller.lastLatencyMs {
             Text("Last dictation: \(Int(latency.rounded())) ms")
         }
+        Button("Paste Last Dictation") { controller.pasteLast() }
+            .keyboardShortcut("v", modifiers: [.control, .command])
+            .disabled(controller.history.entries.isEmpty)
         if !controller.history.entries.isEmpty {
             Menu("Recent Dictations") {
                 ForEach(controller.history.entries) { entry in
