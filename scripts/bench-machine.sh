@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Benchmarks the standard backend matrix twice on this Mac and prints rows for docs/LATENCY.md.
-# Run after scripts/install.sh; models not used before are downloaded on first use.
+# Run after scripts/install.sh; it downloads any model in the matrix that is missing.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -10,7 +10,10 @@ matrix=(
   "parakeet-v2 rules" "parakeet-v2 qwen3-1.7b" "parakeet-v2 qwen3-4b"
 )
 
+command -v jq >/dev/null || { echo "error: jq is missing: brew install jq" >&2; exit 1; }
 "$root/bench/corpus/make_corpus.sh" >/dev/null
+uv run --project "$root/engine" sonicflow-models download \
+  parakeet-v2 parakeet-v3 whisper-turbo qwen3-1.7b qwen3-4b
 mkdir -p "$out"
 for combo in "${matrix[@]}"; do
   read -r asr cleanup <<<"$combo"
