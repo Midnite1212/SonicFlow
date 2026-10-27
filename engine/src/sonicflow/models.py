@@ -62,8 +62,8 @@ RECOMMENDED: tuple[Model, ...] = (
         "Parakeet TDT 0.6B v2",
         "recommended",
         _gb(2.47),
-        "Default. Fastest and most accurate English model tested.",
-        Bench(115, 0.049),
+        "Default. Fastest English model tested, and as accurate as any.",
+        Bench(106, 0.013),
     ),
     Model(
         "parakeet-v3",
@@ -74,7 +74,7 @@ RECOMMENDED: tuple[Model, ...] = (
         "recommended",
         _gb(2.51),
         "Adds 24 European languages at the same speed.",
-        Bench(115, 0.049),
+        Bench(115, 0.016),
     ),
     Model(
         "whisper-turbo",
@@ -85,7 +85,7 @@ RECOMMENDED: tuple[Model, ...] = (
         "recommended",
         _gb(1.61),
         "Multilingual, including Chinese and Japanese; about five times slower.",
-        Bench(588, 0.059),
+        Bench(644, 0.013),
     ),
     Model(
         "qwen3-4b",
@@ -96,7 +96,7 @@ RECOMMENDED: tuple[Model, ...] = (
         "recommended",
         _gb(2.28),
         "Default. Most accurate self-correction cleanup.",
-        Bench(365, 0.027),
+        Bench(378, 0.008),
     ),
     Model(
         "qwen3-1.7b",
@@ -107,7 +107,7 @@ RECOMMENDED: tuple[Model, ...] = (
         "recommended",
         _gb(0.98),
         "Faster cleanup with slightly more misses.",
-        Bench(230, 0.042),
+        Bench(234, 0.023),
     ),
     Model(
         "rules",
@@ -118,7 +118,7 @@ RECOMMENDED: tuple[Model, ...] = (
         "recommended",
         0,
         "No model: removes fillers and fixes spacing, ~0 ms.",
-        Bench(113, 0.153),
+        Bench(113, 0.132),
     ),
     Model(
         "none",
@@ -129,7 +129,7 @@ RECOMMENDED: tuple[Model, ...] = (
         "recommended",
         0,
         "Pastes the raw transcript.",
-        Bench(115, 0.176),
+        Bench(106, 0.154),
     ),
 )
 

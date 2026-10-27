@@ -9,6 +9,12 @@ def test_normalize_strips_case_and_punctuation():
     assert normalize("Let's ship it, Thursday!") == "let's ship it thursday"
 
 
+def test_normalize_spells_formatting_variants_one_way():
+    assert normalize("Move the standup to 10:30.") == normalize("move the stand up to ten thirty")
+    assert normalize("Deploy at 6.") == "deploy at six"
+    assert normalize("Rename getUserProfile") == "rename get user profile"
+
+
 def test_corpus_wer_is_zero_for_matching_text():
     assert corpus_wer(["Hello, world."], ["hello world"]) == 0.0
 
