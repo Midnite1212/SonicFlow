@@ -1,6 +1,7 @@
 import mlx.core as mx
 import mlx_whisper
 import numpy as np
+from mlx.utils import tree_flatten
 from mlx_whisper.transcribe import ModelHolder
 
 from sonicflow.backends.base import ASRBackend
@@ -21,6 +22,10 @@ class WhisperASR(ASRBackend):
         ModelHolder.model = None
         ModelHolder.model_path = None
         mx.clear_cache()
+
+    def arrays(self) -> list:
+        model = ModelHolder.model
+        return [] if model is None else [a for _, a in tree_flatten(model.parameters())]
 
     def transcribe(self, audio: np.ndarray) -> str:
         # A single temperature disables fallback re-decoding, which would multiply latency.

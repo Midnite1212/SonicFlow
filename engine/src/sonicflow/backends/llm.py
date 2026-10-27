@@ -1,5 +1,6 @@
 import mlx.core as mx
 import mlx_lm
+from mlx.utils import tree_flatten
 from mlx_lm.models.cache import can_trim_prompt_cache, make_prompt_cache, trim_prompt_cache
 from mlx_lm.sample_utils import make_sampler
 
@@ -41,6 +42,9 @@ class LLMCleanup(PromptCleanup):
         self._prefix_len = self._cache[0].offset
 
         self._rewrite("Send it Friday, no wait, Thursday.")
+
+    def arrays(self) -> list:
+        return [a for _, a in tree_flatten(self._model.parameters())]
 
     def unload(self) -> None:
         del self._model, self._tokenizer, self._cache

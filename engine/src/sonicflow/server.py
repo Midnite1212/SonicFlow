@@ -12,6 +12,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+from sonicflow import residency
 from sonicflow.backends.base import ASRBackend, ASRStream, CleanupBackend, CleanupContext
 from sonicflow.backends.registry import available, create_asr, create_cleanup
 from sonicflow.benchmarks import Benchmarks
@@ -57,8 +58,19 @@ class Engine:
         self.cleanup = cleanup
         self._switching = asyncio.Lock()
         self._warmed_at = 0.0
+        self._locked: dict[int, list[residency.Region]] = {}
         # MLX and most local runtimes are not safe to drive from several threads at once.
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="inference")
+
+    def load(self, backend: ASRBackend | CleanupBackend) -> None:
+        """Loads on the inference thread and locks the weights in RAM (see residency)."""
+        backend.load()
+        if residency.enabled():
+            self._locked[id(backend)] = residency.lock(backend.arrays())
+
+    def unload(self, backend: ASRBackend | CleanupBackend) -> None:
+        residency.unlock(self._locked.pop(id(backend), []))
+        backend.unload()
 
     async def run[T](self, fn: Callable[..., T], *args: object) -> T:
         return await asyncio.get_running_loop().run_in_executor(self._executor, fn, *args)
@@ -89,16 +101,16 @@ class Engine:
                 else None
             )
             if asr is not None:
-                await self.run(asr.load)
+                await self.run(self.load, asr)
             if cleanup is not None:
-                await self.run(cleanup.load)
+                await self.run(self.load, cleanup)
             replaced = [old for old, new in ((self.asr, asr), (self.cleanup, cleanup)) if new]
             self.asr = asr or self.asr
             self.cleanup = cleanup or self.cleanup
             # Utterances already running hold their own references, so this only frees caches
             # once they finish; it runs on the inference thread after any queued work.
             for backend in replaced:
-                await self.run(backend.unload)
+                await self.run(self.unload, backend)
 
     def shutdown(self) -> None:
         self._executor.shutdown(wait=True)
@@ -109,8 +121,8 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        await engine.run(asr.load)
-        await engine.run(cleanup.load)
+        await engine.run(engine.load, asr)
+        await engine.run(engine.load, cleanup)
         await engine.run(common_words)
         yield
         downloads.shutdown()

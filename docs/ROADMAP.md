@@ -26,6 +26,7 @@
   - [x] LaunchAgent with `sonicflow-service`, engine deployed to Application Support (#17)
   - [x] Switch models at runtime, choice saved in config.json (#25)
   - [x] One-step `scripts/install.sh` (#35)
+  - [x] Model weights locked in RAM so memory pressure can't slow the next dictation (#30, ADR 0006)
 - [x] v0.8c Models pane: Recommended, Browse, My Models (#56)
 - [x] v0.8b Ollama cleanup models and Hugging Face search (#54)
 - [x] v0.8a Model library: catalogue, explicit downloads, your own models (#52)
