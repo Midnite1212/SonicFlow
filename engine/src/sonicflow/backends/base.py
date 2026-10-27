@@ -40,6 +40,10 @@ class ASRBackend(ABC):
     def unload(self) -> None:
         pass
 
+    def arrays(self) -> list:
+        """MLX arrays to keep in RAM between dictations: the loaded model's weights."""
+        return []
+
     def stream(self) -> ASRStream:
         return ASRStream(self)
 
@@ -61,6 +65,10 @@ class CleanupBackend(ABC):
 
     def unload(self) -> None:
         pass
+
+    def arrays(self) -> list:
+        """MLX arrays to keep in RAM between dictations: the loaded model's weights."""
+        return []
 
     @abstractmethod
     def clean(self, text: str, context: CleanupContext) -> str: ...

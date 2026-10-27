@@ -1,5 +1,6 @@
 import mlx.core as mx
 import numpy as np
+from mlx.utils import tree_flatten
 from parakeet_mlx import BaseParakeet, from_pretrained
 from parakeet_mlx.audio import get_logmel
 
@@ -21,6 +22,9 @@ class ParakeetASR(ASRBackend):
     def unload(self) -> None:
         self._model = None
         mx.clear_cache()
+
+    def arrays(self) -> list:
+        return [] if self._model is None else [a for _, a in tree_flatten(self._model.parameters())]
 
     def transcribe(self, audio: np.ndarray) -> str:
         assert self._model is not None, "load() must run before transcribe()"
