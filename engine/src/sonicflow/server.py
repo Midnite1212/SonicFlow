@@ -38,6 +38,9 @@ def _log_failure(future: Future) -> None:
         logger.warning("warm-up failed: %r", error)
 
 
+KEEP_WARM_S = 1.0
+
+
 class CommandError(Exception):
     """A command-mode request the engine cannot carry out; reported to the client."""
 
@@ -52,6 +55,7 @@ class Engine:
         self.asr = asr
         self.cleanup = cleanup
         self._switching = asyncio.Lock()
+        self._warmed_at = 0.0
         # MLX and most local runtimes are not safe to drive from several threads at once.
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="inference")
 
@@ -60,8 +64,15 @@ class Engine:
 
     def warm_in_background(self) -> None:
         """Wakes the GPU and pages model weights back in while the user is still speaking."""
+        self._warmed_at = time.monotonic()
         future = self._executor.submit(self._warm)
         future.add_done_callback(_log_failure)
+
+    def keep_warm(self) -> None:
+        """Repeats the warm-up while audio streams in, since an idle GPU clocks down within a
+        second or two and the cleanup that follows release runs slower."""
+        if time.monotonic() - self._warmed_at >= KEEP_WARM_S:
+            self.warm_in_background()
 
     def _warm(self) -> None:
         self.asr.warm()
@@ -172,6 +183,7 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
                     if stream is None:
                         await send_error("audio received before start")
                         continue
+                    engine.keep_warm()
                     partial = await engine.run(stream.feed, pcm16_to_float32(data))
                     if partial is not None:
                         await ws.send_json({"type": "partial", "text": partial})
