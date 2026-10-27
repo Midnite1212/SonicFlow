@@ -29,6 +29,10 @@ enum EngineAPI {
         let _: Ignored = try await request("v1/models/download", method: "POST", body: ["id": id])
     }
 
+    static func benchmark(_ id: String) async throws {
+        let _: Ignored = try await request("v1/models/bench", method: "POST", body: ["id": id])
+    }
+
     static func addModel(source: String, family: String? = nil) async throws -> ModelInfo {
         var body = ["source": source]
         body["family"] = family

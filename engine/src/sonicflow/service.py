@@ -10,6 +10,7 @@ import urllib.request
 from pathlib import Path
 
 from sonicflow.backends.registry import available
+from sonicflow.benchmarks import corpus_dir
 from sonicflow.config import Settings, load_backend_choice, save_backend_choice
 
 LABEL = "com.sonicflow.engine"
@@ -103,6 +104,9 @@ def deploy_engine() -> Path:
         + ["--reinstall-package", "sonicflow", str(ENGINE_SOURCE)],
         check=True,
     )
+    corpus = corpus_dir()
+    corpus.mkdir(parents=True, exist_ok=True)
+    shutil.copy(ENGINE_SOURCE.parent / "bench" / "corpus" / "manifest.jsonl", corpus)
     return venv / "bin" / "sonicflow"
 
 

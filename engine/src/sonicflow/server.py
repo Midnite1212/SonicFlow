@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from sonicflow.backends.base import ASRBackend, ASRStream, CleanupBackend, CleanupContext
 from sonicflow.backends.registry import available, create_asr, create_cleanup
+from sonicflow.benchmarks import Benchmarks
 from sonicflow.config import Settings, save_backend_choice
 from sonicflow.downloads import Downloads
 from sonicflow.model_routes import model_router
@@ -113,11 +114,13 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
         await engine.run(common_words)
         yield
         downloads.shutdown()
+        benchmarks.shutdown()
         engine.shutdown()
 
     downloads = Downloads()
+    benchmarks = Benchmarks()
     app = FastAPI(lifespan=lifespan)
-    app.include_router(model_router(engine, downloads))
+    app.include_router(model_router(engine, downloads, benchmarks))
 
     @app.get("/health")
     def health() -> dict[str, str]:

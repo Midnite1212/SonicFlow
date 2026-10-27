@@ -37,17 +37,18 @@ final class ModelsModel {
         } catch {
             message = "The engine isn't reachable. Restart it in Settings."
         }
-        pollWhileDownloading()
+        pollWhileWorking()
     }
 
-    /// Downloads report progress only when asked, so poll once a second until none are running.
-    private func pollWhileDownloading() {
-        guard list?.isDownloading == true, poller == nil else { return }
+    /// Downloads and benchmarks report progress only when asked, so poll once a second until none
+    /// are running.
+    private func pollWhileWorking() {
+        guard list?.isWorking == true, poller == nil else { return }
         poller = Task { [weak self] in
             while let self, !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 if let list = try? await EngineAPI.models() { self.list = list }
-                if self.list?.isDownloading != true { break }
+                if self.list?.isWorking != true { break }
             }
             self?.poller = nil
         }
@@ -55,6 +56,10 @@ final class ModelsModel {
 
     func download(_ model: ModelInfo) async {
         await perform { try await EngineAPI.download(model.id) }
+    }
+
+    func benchmark(_ model: ModelInfo) async {
+        await perform { try await EngineAPI.benchmark(model.id) }
     }
 
     func use(_ model: ModelInfo) async {
@@ -166,7 +171,7 @@ struct ModelsView: View {
         if let list = model.list {
             ModelSection(title: "Speech recognition", models: list.models(in: .recommended, kind: .asr), store: model)
             ModelSection(title: "Cleanup", models: list.models(in: .recommended, kind: .cleanup), store: model)
-            Text("Release-to-text time and word error rate on the 22-clip test set, measured on an M3 Pro. Cleanup times include Parakeet v2.")
+            Text("Release-to-text time and word error rate on the 21-clip test set, measured on an M3 Pro unless marked this Mac. Cleanup times include the speech model. Benchmark any installed model from its ⋯ menu.")
                 .font(.callout)
                 .foregroundStyle(Theme.tertiary)
         }
@@ -326,22 +331,40 @@ private struct ModelRow: View {
                 if model.isLocalFolder {
                     Text(model.source).font(.caption).foregroundStyle(Theme.tertiary).lineLimit(1).truncationMode(.middle)
                 }
-                if let bench = model.bench {
+                if let benchmark = model.benchmark, benchmark.isRunning {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Benchmarking on this Mac…").foregroundStyle(Theme.secondary)
+                    }
+                    .font(.callout)
+                } else if let bench = model.bench {
                     HStack(spacing: 10) {
                         SpeedStripe(ms: bench.p50Ms, height: 4).frame(width: 140)
                         Text(Format.ms(bench.p50Ms)).monospacedDigit()
                             .foregroundStyle(Theme.Speed(ms: bench.p50Ms).text)
                         Text("\((bench.wer * 100).formatted(.number.precision(.fractionLength(1))))% word errors")
                             .foregroundStyle(Theme.tertiary)
+                        if bench.isLocal {
+                            Text("this Mac").foregroundStyle(Theme.tertiary)
+                        }
                     }
                     .font(.callout)
+                }
+                if let benchmark = model.benchmark, let error = benchmark.error {
+                    Text("Benchmark failed: \(error)").font(.callout).foregroundStyle(Theme.alert).lineLimit(2)
                 }
             }
             Spacer(minLength: 12)
             action(isActive: isActive)
-            if !isActive, model.installed || model.group == .custom, model.hasFiles {
+            if model.installed || model.group == .custom {
                 Menu {
-                    if model.group == .custom {
+                    if model.installed {
+                        Button("Benchmark on This Mac") { Task { await store.benchmark(model) } }
+                            .disabled(model.benchmark?.isRunning ?? false)
+                    }
+                    if isActive || !model.hasFiles {
+                        EmptyView()
+                    } else if model.group == .custom {
                         Button(model.isLocalFolder || model.family == "ollama" ? "Remove from SonicFlow" : "Remove and Delete Download", role: .destructive) {
                             Task { await store.remove(model) }
                         }
