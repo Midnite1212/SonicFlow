@@ -41,8 +41,33 @@ class ItemResult:
     text: str
 
 
+# fmt: off
+ONES = [
+    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+    "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
+    "nineteen",
+]
+# fmt: on
+TENS = ["twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+COMPOUNDS = {"stand up": "standup"}
+
+
+def number_words(n: int) -> str:
+    if n < 20:
+        return ONES[n]
+    tens, ones = divmod(n, 10)
+    return TENS[tens - 2] + (f" {ONES[ones]}" if ones else "")
+
+
 def normalize(text: str) -> str:
-    return " ".join(re.sub(r"[^\w\s']", " ", text.lower()).split())
+    """Lowercases and strips punctuation, and spells formatting variants one way so WER counts
+    recognition errors only: digits under 100 as words, camelCase as separate words."""
+    text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text).lower()
+    text = re.sub(r"\b\d{1,2}\b", lambda m: number_words(int(m.group())), text.replace(":", " "))
+    text = " ".join(re.sub(r"[^\w\s']", " ", text).split())
+    for spaced, joined in COMPOUNDS.items():
+        text = re.sub(rf"\b{spaced}\b", joined, text)
+    return text
 
 
 def load_corpus(corpus_dir: Path) -> list[CorpusItem]:

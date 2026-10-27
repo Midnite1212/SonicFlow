@@ -25,7 +25,18 @@ Accuracy floor: corpus WER (raw vs spoken) ≤ 5% on the synthetic corpus; re-ba
 
 ## Results
 
-Current matrix (22-item corpus, `scripts/bench-machine.sh`, two runs each):
+Current matrix (21-item corpus, one run each). WER spells numbers under 100 as words, splits camelCase and joins known compounds on both sides, so formatting differences ("10:30" vs "ten thirty") no longer count as errors (#6):
+
+| Date | Machine | ASR | Cleanup | release→text p50 | WER raw | WER clean |
+|---|---|---|---|---|---|---|
+| 2026-10-27 | Apple M3 Pro | parakeet-v2 | none | 106 ms | 1.3% | 15.4% |
+| 2026-10-27 | Apple M3 Pro | parakeet-v3 | none | 115 ms | 1.6% | 16.2% |
+| 2026-10-27 | Apple M3 Pro | whisper-turbo | none | 644 ms | 1.3% | 15.0% |
+| 2026-10-27 | Apple M3 Pro | parakeet-v2 | rules | 113 ms | 1.3% | 13.2% |
+| 2026-10-27 | Apple M3 Pro | parakeet-v2 | qwen3-1.7b | 234 ms | 1.3% | 2.3% |
+| 2026-10-27 | Apple M3 Pro | parakeet-v2 | qwen3-4b | 378 ms | 1.3% | 0.8% |
+
+History (WER before normalisation):
 
 | Date | Machine | ASR | Cleanup | release→text p50 / p95 | WER raw | WER clean |
 |---|---|---|---|---|---|---|
@@ -35,11 +46,6 @@ Current matrix (22-item corpus, `scripts/bench-machine.sh`, two runs each):
 | 2026-10-26 | Apple M3 Pro | parakeet-v2 | rules | 112–115 / 295–417 ms | 4.9% | 15.3% |
 | 2026-10-26 | Apple M3 Pro | parakeet-v2 | qwen3-1.7b | 229–232 / 291–317 ms | 4.9% | 4.2% |
 | 2026-10-26 | Apple M3 Pro | parakeet-v2 | qwen3-4b | 362–367 / 472–498 ms | 4.9% | 2.7% |
-
-History:
-
-| Date | Machine | ASR | Cleanup | release→text p50 / p95 | WER raw | WER clean |
-|---|---|---|---|---|---|---|
 | 2026-10-23 | Apple M3 Pro | parakeet-v2 | none | 110–111 / 181–213 ms | 7.1% | — |
 | 2026-10-23 | Apple M3 Pro | parakeet-v3 | none | 115–125 / 195–217 ms | 8.2% | — |
 | 2026-10-23 | Apple M3 Pro | whisper-turbo | none | 595–602 / 712–721 ms | 8.8% | — |
@@ -50,7 +56,7 @@ History:
 | 2026-10-24 | Apple M3 Pro | parakeet-v2 | qwen3-1.7b (prompt v2, 20 items) | 20 items, 60% routed to LLM: cleanup p50/p95 131 / 167 ms | — | 5.3% (was 7.7%) |
 | 2026-10-24 | Apple M3 Pro | parakeet-v2 | qwen3-4b (prompt v2, 20 items) | 372 / 473 ms | — | 3.4% (was 3.8%) |
 
-Ranges span two runs with warm models; load is ~1.2 s once cached. Synthetic-corpus WER over-counts number and compound formatting ("ten thirty" vs "10.30", "standup" vs "stand up"), so the absolute figures are pessimistic; the v2/v3 gap is real ("write path" → "right path" in both, extra misses in v3). Whisper pads every input to a 30 s window, so its cost is ~580 ms even for a 2 s clip; it drops some fillers on its own and formats identifiers and sentences better, but misses the raw budget.
+Ranges span two runs with warm models; load is ~1.2 s once cached. The v2/v3 gap is real ("write path" → "right path" in both, extra misses in v3). Whisper pads every input to a 30 s window, so its cost is ~580 ms even for a 2 s clip; it drops some fillers on its own and formats identifiers and sentences better, but misses the raw budget.
 
 LLM cleanup only runs on the 4 items `needs_llm()` flags, so its cost shows at p95: per rewrite, qwen3-1.7b takes 129–173 ms and qwen3-4b 230–353 ms on top of ASR. Both resolve all three self-corrections; only 4B also drops the ambiguous "like". Both drop a leading "Let's" in "Let's ship it on Friday, no wait, Thursday".
 

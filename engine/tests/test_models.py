@@ -75,7 +75,7 @@ def test_list_marks_groups_and_active(client):
     groups = {m["id"]: m["group"] for m in body["models"]}
     assert groups["parakeet-v2"] == "recommended"
     assert groups["whisper-small"] == "catalog"
-    assert next(m for m in body["models"] if m["id"] == "qwen3-4b")["bench"]["p50_ms"] == 365
+    assert next(m for m in body["models"] if m["id"] == "qwen3-4b")["bench"]["p50_ms"] == 378
 
 
 def test_add_and_remove_a_local_folder(client, tmp_path):
