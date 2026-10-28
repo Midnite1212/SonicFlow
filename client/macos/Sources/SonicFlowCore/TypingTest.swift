@@ -33,6 +33,52 @@ public enum TypingTest {
         return Double(correct) / 5 / (seconds / 60)
     }
 
+    public enum Mark: Equatable, Sendable {
+        case pending, correct, wrong, missed, extra
+    }
+
+    public struct Glyph: Equatable, Sendable {
+        public let character: Character
+        public let mark: Mark
+    }
+
+    /// Marks the passage word by word, as Monkeytype does: space moves to the next word, each typed word
+    /// is compared only with its own target, letters left untyped when space was pressed are missed, and
+    /// letters typed past the end of a word are shown after it as extra.
+    public static func marks(typed: String, passage: String) -> [[Glyph]] {
+        let typedWords = typed.split(separator: " ", omittingEmptySubsequences: false).map(Array.init)
+        return passage.split(separator: " ").enumerated().map { index, target in
+            guard index < typedWords.count else { return target.map { Glyph(character: $0, mark: .pending) } }
+            let word = typedWords[index]
+            let isCurrent = index == typedWords.count - 1
+            var glyphs = target.enumerated().map { offset, character in
+                let mark: Mark =
+                    offset < word.count
+                    ? (word[offset] == character ? .correct : .wrong) : isCurrent ? .pending : .missed
+                return Glyph(character: character, mark: mark)
+            }
+            glyphs += word.dropFirst(target.count).map { Glyph(character: $0, mark: .extra) }
+            return glyphs
+        }
+    }
+
+    /// Done once the last word is typed correctly, or space is pressed after it.
+    public static func isFinished(typed: String, passage: String) -> Bool {
+        let typedWords = typed.split(separator: " ", omittingEmptySubsequences: false)
+        let passageWords = passage.split(separator: " ")
+        return typedWords.count > passageWords.count
+            || (typedWords.count == passageWords.count && typedWords.last == passageWords.last)
+    }
+
+    /// Space can't start a word, so stray spaces never skip one.
+    public static func normalized(_ typed: String) -> String {
+        var result = ""
+        for character in typed where !(character == " " && (result.isEmpty || result.last == " ")) {
+            result.append(character)
+        }
+        return result
+    }
+
     public static func secondsToType(words: Int, wordsPerMinute: Double) -> Double {
         Double(words) / wordsPerMinute * 60
     }

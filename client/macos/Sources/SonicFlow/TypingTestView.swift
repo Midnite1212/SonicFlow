@@ -12,8 +12,13 @@ final class TypingTestModel: Identifiable {
 
     var typed = "" {
         didSet {
+            let normalized = TypingTest.normalized(typed)
+            if normalized != typed {
+                typed = normalized
+                return
+            }
             if startedAt == nil, !typed.isEmpty { startedAt = Date() }
-            if finishedAt == nil, typed.count >= passage.count { finishedAt = Date() }
+            if finishedAt == nil, TypingTest.isFinished(typed: typed, passage: passage) { finishedAt = Date() }
         }
     }
 
@@ -63,15 +68,25 @@ struct TypingTestView: View {
         .frame(width: 560)
     }
 
-    /// The passage, with typed characters shown as correct or wrong and the rest dimmed.
+    /// The passage marked word by word: right letters bright, wrong and extra ones coral, missed ones
+    /// underlined, the rest dimmed.
     private var passage: Text {
-        var text = AttributedString(model.passage)
-        let typed = Array(model.typed)
-        for (offset, index) in text.characters.indices.enumerated() {
-            let next = text.characters.index(after: index)
-            text[index..<next].foregroundColor =
-                offset >= typed.count
-                ? Theme.tertiary : typed[offset] == text.characters[index] ? Theme.text : Theme.alert
+        var text = AttributedString()
+        for (index, word) in TypingTest.marks(typed: model.typed, passage: model.passage).enumerated() {
+            if index > 0 { text += AttributedString(" ") }
+            for glyph in word {
+                var letter = AttributedString(String(glyph.character))
+                switch glyph.mark {
+                case .pending: letter.foregroundColor = Theme.tertiary
+                case .correct: letter.foregroundColor = Theme.text
+                case .wrong: letter.foregroundColor = Theme.alert
+                case .extra: letter.foregroundColor = Theme.alert.opacity(0.6)
+                case .missed:
+                    letter.foregroundColor = Theme.tertiary
+                    letter.underlineStyle = Text.LineStyle(pattern: .solid, color: Theme.alert)
+                }
+                text += letter
+            }
         }
         return Text(text).font(.title3)
     }

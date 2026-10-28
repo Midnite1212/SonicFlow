@@ -229,7 +229,7 @@ A latency drawn as a livery stripe. The same component appears on Home, every Re
 - **Recent:** a Section heading with a small glass "Show All" button, then up to eight rows split by seams.
 
 ### Typing test
-A sheet from Settings › Typing speed (or Home's "Measure Yours"): a passage on Panel, characters turning Off-White when right and Alert Coral when wrong, a text field, a live wpm figure, and Cancel / Use This Speed. Net wpm counts correctly typed words, five characters to a word. Only the number is saved; time saved and Home's typing line use it.
+A sheet from Settings › Typing speed (or Home's "Measure Yours"): a passage on Panel, a text field, a live wpm figure, and Cancel / Use This Speed. It behaves like Monkeytype: space moves to the next word and can't start one, each typed word is compared only with its own target, right letters turn Off-White, wrong ones and extra ones past the word's end Alert Coral, and letters skipped by pressing space get a coral underline. The test ends when the last word is right or space is pressed after it. Net wpm counts correctly typed words, five characters to a word. Only the number is saved; time saved and Home's typing line use it.
 
 ### Glass sections
 - **GlassSection:** a `headline` title in Off-White (with an optional trailing control, such as Styles' "Add App"), then the rows on a glass panel with 20pt horizontal padding, then an optional Callout Dim Slate footer.
