@@ -263,7 +263,7 @@ SwiftPM records the deployment target (macOS 14) as the SDK version, which makes
 - **Do** draw every latency as a Speed Stripe on the fixed 0–600 ms scale with the 100 ms instant tick.
 - **Do** colour a time by `Theme.Speed(ms:)`: under 200 ms cyan (#64D2FF), under 500 ms blue (#0A84FF fill, #5EADFF text), otherwise purple (#BF5AF2 fill, #DA8FFF text).
 - **Do** set content on the ground and separate it with space and one-device-pixel seams.
-- **Do** reach for native structure first: grouped `Form`, `Table`, `List`, `.searchable`, toolbar items, `ContentUnavailableView`.
+- **Do** reach for native structure first: `GlassSection`, `Table`, `List`, `.searchable`, toolbar items, `ContentUnavailableView`.
 - **Do** draw the sidebar selection as the neutral fill, never the system accent blue.
 - **Do** keep the window dark in either system appearance (`window.appearance = .darkAqua`, Midnight background); the pill forces dark too.
 - **Do** lead Home with the 7-day median, so one slow dictation can't paint the headline.
