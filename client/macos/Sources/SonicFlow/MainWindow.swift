@@ -40,6 +40,7 @@ final class Navigation {
     let history = HistoryViewModel()
     let onboarding = OnboardingModel()
     let models = ModelsModel()
+    let vocabulary = VocabularyModel()
 }
 
 /// Owns the app window. SonicFlow is a menu-bar accessory, so it joins the Dock and the app
@@ -73,8 +74,10 @@ final class MainWindow: NSObject, NSWindowDelegate {
         let hosting = NSHostingController(rootView: root)
         // By default the window resizes to the content's ideal size, which a List makes enormous.
         hosting.sizingOptions = []
+        hosting.sceneBridgingOptions = [.title, .toolbars]
         let window = NSWindow(contentViewController: hosting)
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        window.toolbarStyle = .unified
         window.title = (navigation.pane ?? .home).title
         // The window is the night-session world in either system appearance.
         window.appearance = NSAppearance(named: .darkAqua)
@@ -104,14 +107,13 @@ struct RootView: View {
     @ViewBuilder private var content: some View {
         if controller.settings.onboarded {
             NavigationSplitView {
-                List(Pane.allCases, selection: $navigation.pane) { pane in
-                    Label(pane.title, systemImage: pane.symbol)
-                        .badge(count(pane))
-                        .tag(pane)
+                List(selection: $navigation.pane) {
+                    Section { rows(.home, .history) }
+                    Section("Personalize") { rows(.dictionary, .snippets, .styles) }
+                    Section("Setup") { rows(.models, .settings) }
                 }
-                .scrollContentBackground(.hidden)
-                .background(Theme.board)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 200, max: 240)
+                .listStyle(.sidebar)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 210, max: 240)
             } detail: {
                 switch navigation.pane ?? .home {
                 case .home:
@@ -119,11 +121,15 @@ struct RootView: View {
                 case .history: HistoryView(
                         controller: controller, settings: controller.settings, model: navigation.history
                     )
-                case .dictionary: DictionaryView(store: controller.personalization)
-                case .snippets: SnippetsView(store: controller.personalization)
+                case .dictionary: DictionaryView(store: controller.personalization, model: navigation.vocabulary)
+                case .snippets: SnippetsView(store: controller.personalization, model: navigation.vocabulary)
                 case .styles: StylesView(store: controller.personalization)
                 case .models: ModelsView(model: navigation.models)
-                case .settings: SettingsView(settings: controller.settings, model: settingsModel, navigation: navigation)
+                case .settings:
+                    SettingsView(
+                        controller: controller, settings: controller.settings, model: settingsModel,
+                        navigation: navigation
+                    )
                 }
             }
         } else {
@@ -131,6 +137,14 @@ struct RootView: View {
                 controller: controller, settings: controller.settings, settingsModel: settingsModel,
                 model: navigation.onboarding
             )
+        }
+    }
+
+    private func rows(_ panes: Pane...) -> some View {
+        ForEach(panes) { pane in
+            Label(pane.title, systemImage: pane.symbol)
+                .badge(count(pane))
+                .tag(pane)
         }
     }
 

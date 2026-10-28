@@ -1,19 +1,18 @@
 ---
 name: SonicFlow
-description: A night-session timing panel for local Mac dictation, where every latency is a livery stripe whose length is its time.
+description: A night-session timing board for local Mac dictation, where every latency is a livery stripe whose length is its time.
 colors:
-  ground: "#0F1A33"
-  board: "#132042"
-  panel: "#18264A"
-  seam: "#26365F"
-  text: "#E8ECF5"
-  secondary: "#AEB8D0"
-  tertiary: "#8392B5"
-  cyan: "#2FD3F0"
-  blue: "#3D6BFF"
-  violet: "#8B5CF6"
-  blue-text: "#7F9CFF"
-  violet-text: "#B59BFA"
+  ground: "#0D111C"
+  panel: "#161D2D"
+  seam: "#262E42"
+  text: "#E8EBF2"
+  secondary: "#A4ACBF"
+  tertiary: "#8089A0"
+  cyan: "#64D2FF"
+  blue: "#0A84FF"
+  violet: "#BF5AF2"
+  blue-text: "#5EADFF"
+  violet-text: "#DA8FFF"
   ready: "#4CC38A"
   alert: "#F2706A"
 typography:
@@ -35,6 +34,10 @@ typography:
     fontSize: "17pt"
     fontWeight: 600
     fontFeature: "tnum"
+  section:
+    fontFamily: "SF Pro, -apple-system, system-ui"
+    fontSize: "13pt"
+    fontWeight: 600
   body:
     fontFamily: "SF Pro, -apple-system, system-ui"
     fontSize: "13pt"
@@ -58,17 +61,13 @@ typography:
     fontWeight: 500
     fontFeature: "tnum"
 rounded:
-  field: "7px"
-  panel: "10px"
   capsule: "9999px"
 spacing:
   hint: "4px"
   tight: "8px"
   gap: "12px"
-  panel-gap: "14px"
-  stack: "16px"
-  panel-inset: "18px"
-  pane-inset: "24px"
+  board-gap: "32px"
+  pane-inset: "32px"
   onboarding-inset: "32px"
 components:
   window:
@@ -76,20 +75,11 @@ components:
     width: "980px"
     height: "680px"
   sidebar:
-    backgroundColor: "{colors.board}"
-    textColor: "{colors.text}"
-    width: "200px"
-  panel:
-    backgroundColor: "{colors.panel}"
-    rounded: "{rounded.panel}"
-    padding: "{spacing.panel-inset}"
-  panel-title:
-    textColor: "{colors.secondary}"
-    typography: "{typography.label}"
-  today-strip:
-    backgroundColor: "{colors.panel}"
-    rounded: "{rounded.panel}"
-    padding: "14px 0"
+    material: "system Liquid Glass sidebar"
+    width: "210px"
+  seam:
+    backgroundColor: "{colors.seam}"
+    height: "1 device pixel"
   latency-readout:
     typography: "{typography.display}"
   stripe-track:
@@ -107,19 +97,8 @@ components:
   stripe-budget-tick:
     backgroundColor: "{colors.tertiary}"
     width: "1px"
-  setting-hint:
-    textColor: "{colors.tertiary}"
-    typography: "{typography.callout}"
-  quiet-picker:
-    textColor: "{colors.secondary}"
-    typography: "{typography.body}"
-  search-field:
-    backgroundColor: "{colors.panel}"
-    rounded: "{rounded.field}"
-    height: "28px"
-    padding: "0 10px"
   pill:
-    backgroundColor: "{colors.ground}"
+    material: "Liquid Glass, tinted {colors.ground} at 55%"
     rounded: "{rounded.capsule}"
     typography: "{typography.pill}"
     width: "230px"
@@ -131,175 +110,162 @@ components:
 
 ## Overview
 
-**Creative North Star: "The Night-Session Timing Panel"**
+**Creative North Star: "The Night-Session Timing Board"**
 
-SonicFlow is a timing console at a velodrome after dark. Panels sit on an infield navy ground, one step of lightness above it and edged by a hairline seam. The surface is flat colour: no shadows, no glow, no gradients. The logo's cyan, blue and violet appear only as a speed scale. Every latency is drawn as a livery stripe, and its length is its time on one fixed scale, so any two stripes anywhere in the app compare by length.
+SonicFlow is the timing board at a velodrome after dark. The content is set straight on a deep, quiet navy: figures, stripes and hairline rules, with no boxes around them. Every latency is drawn as a livery stripe, and its length is its time on one fixed scale, so any two stripes anywhere in the app compare by length. Cyan, blue and purple, the logo's hues in Apple's calibrated system versions, appear only as that speed scale.
 
-The window is opened now and then, so its density is calm. It shows speed first, then whether the engine is ready, then what was said, and every other surface is a tidy panel away. The pill is the one surface seen dozens of times a day. It floats over other apps and never takes focus. Everything else stays native Mac: system sidebar, system controls, SF Pro, standard window chrome.
+Everything around the content is the Mac's own: the Liquid Glass sidebar and toolbar, grouped forms, tables, search and controls. Glass is chrome, never content. The one glass surface SonicFlow draws itself is the pill, because it floats over other apps.
 
-The world rejects the category default of grey or white stat cards with one blue accent, and the generic neon AI look.
+The window is opened now and then, so it is calm. It shows speed first, then whether the engine is ready, then what was said.
+
+The world rejects the category defaults: grey or white stat cards with one blue accent, outlined boxes around every group, and neon on saturated navy, which reads as a gaming or AI app rather than a Mac app.
 
 **Key Characteristics:**
-- Navy ground, panels one lightness step up, a 1px seam for every edge and divider.
-- Cyan, blue and violet mean speed and nothing else: under 200 ms, under 500 ms, slower.
+- Deep navy ground; content unboxed, separated by one-device-pixel seams.
+- Cyan, blue and purple mean speed and nothing else: under 200 ms, under 500 ms, slower.
 - One stripe scale everywhere: 0–600 ms, with a 500 ms budget tick.
+- Native chrome: Liquid Glass sidebar and toolbar, grouped forms, tables, `.searchable`.
 - SF Pro throughout, tabular digits for every figure.
 - The same dark world in both system appearances.
 
 ## Colors
 
-A cool navy ladder carries structure, and three saturated logo hues carry one meaning: how fast it was.
+A quiet navy ladder carries structure, and three calibrated hues carry one meaning: how fast it was.
 
 ### Primary (the Speed Scale)
-- **Speed Cyan** (#2FD3F0): a time under 200 ms. It fills the stripe and is also the text colour for that time. In the pill, cyan colours the live input-level bars while listening.
-- **Speed Blue** (#3D6BFF): stripe fill for 200–499 ms.
-- **Speed Violet** (#8B5CF6): stripe fill for 500 ms and slower.
-- **Blue Text** (#7F9CFF): the text colour for a 200–499 ms figure. Speed Blue is too dark to read as text on navy.
-- **Violet Text** (#B59BFA): the text colour for a figure of 500 ms or more, for the same reason.
+- **Speed Cyan** (#64D2FF, the system cyan): a time under 200 ms. It fills the stripe and is also the text colour for that time. In the pill, cyan colours the live input-level bars while listening.
+- **Speed Blue** (#0A84FF, the system blue): stripe fill for 200–499 ms.
+- **Speed Purple** (#BF5AF2, the system purple): stripe fill for 500 ms and slower.
+- **Blue Text** (#5EADFF): the text colour for a 200–499 ms figure.
+- **Purple Text** (#DA8FFF): the text colour for a figure of 500 ms or more.
 
 The thresholds come from `Theme.Speed(ms:)`: `ms < 200` is fast, `ms < 500` is normal, anything else is slow. A stripe takes the fill colour and its figure takes the text colour of the same step.
 
 ### Status
-- **Ready Green** (#4CC38A): the 8px engine-online dot, the "Engine running" label, granted-permission checks, and the control tint (switches, default buttons).
-- **Alert Coral** (#F2706A): the engine-offline dot, "Needs permission", "Engine not reachable", and the pill's recording dot while listening.
+- **Ready Green** (#4CC38A): the engine-online dot, granted permissions, and the control tint (switches, default buttons).
+- **Alert Coral** (#F2706A): the engine-offline dot, "Needs permission", errors, and the pill's recording dot while listening.
 
 ### Neutral
-- **Infield Navy** (#0F1A33): the ground behind every pane, the window background, the onboarding background and the pill body (at 96% opacity). It also colours the stripe's break notch.
-- **Board Navy** (#132042): the sidebar column.
-- **Panel Navy** (#18264A): panels, the Today strip, the search field and the onboarding practice editor.
-- **Seam** (#26365F): every 1px edge: panel strokes, in-panel dividers, full-width dividers, list separators, the empty stripe track, and inactive onboarding step dots.
-- **Off-White** (#E8ECF5): primary text, the command-mode wand, and the pill's level bars in command mode.
-- **Slate** (#AEB8D0): panel titles, row labels, explanatory copy, the "ms" unit, picker values and the "Edit" tag.
-- **Dim Slate** (#8392B5): metadata (times, app names), setting hints, key labels in key/value rows, placeholders, the budget tick and the pill's processing dot.
-
+- **Midnight** (#0D111C): the window background behind every pane and onboarding, and the pill's glass tint. It also colours the stripe's break notch.
+- **Panel** (#161D2D): the onboarding practice editor.
+- **Seam** (#262E42): every rule: the Home board's dividers, list separators and the empty stripe track.
+- **Off-White** (#E8EBF2): primary text, the command-mode wand, and the pill's level bars in command mode.
+- **Slate** (#A4ACBF): secondary text: captions, labels, explanatory copy, the "ms" unit, the "Edit" tag.
+- **Dim Slate** (#8089A0): metadata (times, app names), key labels, footers, the budget tick and the pill's processing dot. It holds 4.8:1 on Panel and 5.4:1 on Midnight.
 
 ### Named Rules
-**The One Job Rule.** Cyan, blue and violet encode latency. The one other use is cyan for the pill's live input-level bars while it is listening. A speed colour on anything else is a false reading. Use status colours for state and Off-White for mode.
+**The One Job Rule.** Cyan, blue and purple encode latency. The one other use is cyan for the pill's live input-level bars. A speed colour on anything else is a false reading.
 
-**The Readable Twin Rule.** Each speed step has a fill and a text colour. Stripes use the fill (cyan, blue, violet), and figures use the text colour (cyan, blue-text, violet-text). Never set a figure in Speed Blue or Speed Violet.
+**The Readable Twin Rule.** Stripes use the fill colour, figures use the text colour. Never set a figure in Speed Blue or Speed Purple.
 
 **The Command Is Not Speed Rule.** Command mode is shown by the wand symbol and off-white level bars, never by a speed colour.
 
-Controls take Ready green as their tint (`RootView.tint(Theme.ready)`), so switches and default buttons never borrow a speed colour. Links and secondary actions ("Show All", "Copy", "Add App…") are Secondary text. Onboarding's current step dot is Text and granted permissions are Ready.
+Controls take Ready green as their tint (`RootView.tint(Theme.ready)`), so switches and default buttons never borrow a speed colour.
 
 ## Typography
 
-**Display Font:** SF Pro (system font)
-**Body Font:** SF Pro (system font)
-**Label/Mono Font:** none. Figures use SF Pro's tabular digits (`.monospacedDigit()`), not SF Mono.
-
-**Character:** One family keeps the window native Mac. Tabular digits line figures up in columns without the width of SF Mono, which reads as code next to prose.
+**Font:** SF Pro (system font) for everything. Figures use its tabular digits (`.monospacedDigit()`), not SF Mono, which reads as code next to prose.
 
 ### Hierarchy
-Sizes are the macOS text styles the code names, given here in points.
-- **Display** (semibold, 64pt, tabular): the latest release-to-text time on Home, coloured by its speed step. A `title2` medium "ms" unit in Slate sits beside it on the first baseline.
-- **Headline** (`largeTitle` semibold, 26pt): onboarding welcome and done screens only.
+- **Display** (semibold, 64pt, tabular): Home's 7-day median release-to-text time, coloured by its speed step, with a `title2` medium "ms" in Slate on the first baseline and a Slate caption beneath saying what it measures. With no median, it shows the latest time and says so.
+- **Headline** (`largeTitle` semibold, 26pt): onboarding welcome and done screens.
 - **Title** (`title` semibold, 22pt): onboarding step titles and Home's "No dictations yet".
-- **Figure** (`title2` semibold, 17pt, tabular): Today strip values.
-- **Body** (`body`, 13pt): dictated text, setting labels and explanations. Rows truncate to one line; History shows the full text, selectable.
-- **Callout** (`callout`, 12pt): metadata rows, key/value rows, setting hints, and every ms figure in a row (tabular).
-- **Label** (`subheadline` semibold, 11pt): panel titles in Slate and History day headers.
-- **Caption** (`caption`, 10pt, tabular): stripe scale labels ("0", "500 ms budget"). In semibold, the "Edit" tag.
-- **Pill** (system 12pt medium, tabular): the pill's elapsed timer and live ms count.
+- **Figure** (`title2` semibold, 17pt, tabular): Today values.
+- **Section** (`headline`, 13pt): Home's "Engine ready" and "Recent". Forms use the system's own section headers.
+- **Body** (`body`, 13pt): dictated text, row labels, explanations.
+- **Callout** (`callout`, 12pt): metadata, key/value rows, footers and every ms figure in a row (tabular).
+- **Label** (`subheadline` semibold, 11pt): History day headers.
+- **Caption** (`caption`, 10pt, tabular): stripe scale labels ("0", "500 ms budget").
+- **Pill** (system 12pt medium, tabular): the pill's timer and live ms count.
+
+No eyebrow labels above headings: a figure's caption sits under it.
 
 ### Named Rules
-**The Tabular Figures Rule.** Every number that can change or sit in a column (latencies, times of day, counts, the pill timer) uses tabular digits. Times are written as `Format.ms`: a rounded integer, a space, then "ms".
+**The Tabular Figures Rule.** Every number that can change or sit in a column uses tabular digits. Times are written as `Format.ms`: a rounded integer, a space, then "ms", never grouped ("1413 ms", not "1,413").
 
 ## Layout
 
-The main window is a native `NavigationSplitView`: a Board Navy sidebar 200–240px wide (ideal 200), and a detail pane on Infield Navy. The window opens at 980×680, its minimum size is 820×560, and the title bar is transparent over full-size content.
+The main window is a native `NavigationSplitView` with a unified toolbar (`sceneBridgingOptions = [.title, .toolbars]`, `toolbarStyle = .unified`) over full-size content with a transparent titlebar. It opens at 980×680 with a minimum of 820×560.
 
-- **Home** is a scrolling column, max 1100px, with 24px insets and 16px between rows. The top row holds a flexible Latency panel beside a fixed 290px Engine panel, both stretched to the same height. Below them come the Today strip and then the Recent panel.
-- **Settings and Styles** use `panelColumn()`: a centred column, max 760px, with 24px insets and 16px between panels.
-- **History, Dictionary and Snippets** are full-bleed: a controls band (24px horizontal and 16px vertical padding), a full-width seam, then a native List on the ground with seam separators.
-- **Onboarding** is a centred column, max 520px, with 32px padding and a seam-topped footer (16px padding). The footer holds step dots (7px) on the left and Back/Continue on the right.
-- **Rows** use fixed columns so that figures align. Recent rows: time 66px, app 80px, text flexible, stripe 96px, ms 64px trailing. History rows: stripe 160px. Stripe rows: label 96px, stripe flexible, ms 64px trailing.
-- **The pill** is a 230×40 non-activating panel, centred horizontally 24pt above the bottom of the visible frame on the screen that holds the mouse. It joins all Spaces and ignores the mouse.
+- **Sidebar:** the system Liquid Glass sidebar, 200–240pt (ideal 210), in three sections: Home and History; Personalize (Dictionary, Snippets, Styles); Setup (Models, Settings). ⌘1–⌘7 select them from the View menu.
+- **Home** is a scrolling timing board, max 1100pt wide, with 32pt horizontal and 28pt vertical insets. The top row holds the latency readout beside the engine column (250pt), split by a vertical seam with 32pt either side. A Today band follows, ruled above and below, then Recent.
+- **Settings, Styles and Models** are grouped `Form`s (`formStyle(.grouped)`), max 720pt, centred on the ground. Models' Recommended / Browse / My Models switch is a segmented control in the toolbar's principal slot.
+- **History** is a native inset `List`, searchable from the toolbar (⌘F), with selectable rows: ⌘C copies, Delete removes. Day headers are plain rows, because sticky section headers draw a grey material bar.
+- **Dictionary and Snippets** are editable `Table`s with the add button in the toolbar (⌘N), Delete on the selection with undo, and a one-paragraph footer above a seam.
+- **Onboarding** is a centred column, max 520pt, with 32pt padding and a seam-topped footer holding step dots and Back/Continue.
+- **Rows** use fixed columns so figures align. Recent rows: time 66pt, app 80pt, text flexible, stripe 96pt, ms 64pt trailing. History rows: stripe 160pt. Stripe rows: label 84pt, stripe flexible, ms 64pt trailing.
+- **The pill** is a 230×40 non-activating panel, centred 24pt above the bottom of the visible frame on the screen with the mouse. It joins all Spaces and ignores the mouse.
 
 ## Elevation & Depth
 
-The window is flat. Depth comes from a step of lightness (ground, then board, then panel) and a 1px seam, never from a drawn shadow, glow or gradient.
-
-### Shadow Vocabulary
-- **Pill window shadow** (`NSPanel.hasShadow = true`, system-drawn): the one shadow in the product. The pill floats over arbitrary app content, and the native window shadow separates it from whatever is underneath.
+Content is flat: no SwiftUI shadows, glows or gradients. Depth belongs to the system: the Liquid Glass sidebar and toolbar float over the content, and grouped forms draw their own rounded section fills.
 
 ### Named Rules
-**The Seam, Not Shadow Rule.** Separate surfaces with a lightness step and a 1px Seam stroke. Draw no shadows in SwiftUI. The pill's system window shadow is the only exception.
+**The Glass Is Chrome Rule.** Liquid Glass is for surfaces that float above content: the system sidebar and toolbar, and the pill over other apps. Never put glass behind content in a pane.
+
+**The Seam, Not Box Rule.** Separate groups of content with space and a one-device-pixel Seam (`Seam()`), never with an outlined box.
 
 ## Shapes
 
-Corners are gentle and few. Panels and the Today strip use a 10px radius, the search field 7px, and the pill and stripes are full capsules. Every container has a 1px Seam stroke on the same shape. Stripes have capsule ends, and a filled stripe is never shorter than its own height, so the smallest time still shows a round cap.
+Stripes and the pill are full capsules. A filled stripe is never shorter than its own height, so the smallest time still shows a round cap. Every other shape (form sections, tables, buttons, the sidebar) is the system's own.
 
 ## Components
 
 ### Speed Stripe (signature)
-A latency drawn as a livery stripe. The same component appears on Home, every Recent and History row, the processing pill, and the onboarding try-it.
-- **Scale:** fill length = track width × min(ms / 600, 1). The scale is fixed at 0–600 ms everywhere, and it never rescales to fit the data.
+A latency drawn as a livery stripe. The same component appears on Home, every Recent and History row, the Models list, the processing pill and the onboarding try-it.
+- **Scale:** fill length = track width × min(ms / 600, 1). The scale is fixed at 0–600 ms everywhere and never rescales to fit the data.
 - **Track:** a 1px Seam capsule across the full width.
-- **Fill:** a capsule in the step's fill colour. Heights are 12px (Home hero), 6px (pill, onboarding) or 4px (rows, 7-day median and p95). The frame adds 8px of vertical room.
-- **Budget tick:** a 1px Dim Slate line at 500/600 of the width, 8px taller than the stripe. It is shown on the Home hero and onboarding, with "0" and "500 ms budget" caption labels under the hero.
-- **Over scale:** past 600 ms the fill runs full width and carries a break notch: two 2px Infield Navy bars rotated 20°, 2px apart, 16px from the right end. The notch says the length is not to scale.
-- **Empty:** with no time, only the track (and the budget tick, where shown) is drawn, and the figure reads "—" in Dim Slate.
+- **Fill:** a capsule in the step's fill colour. Heights are 12px (Home readout), 6px (pill, onboarding) or 4px (rows). The frame adds 8px of vertical room.
+- **Budget tick:** a 1px Dim Slate line at 500/600 of the width, 8px taller than the stripe, on the Home readout and onboarding, with "0" and "500 ms budget" caption labels under the readout.
+- **Over scale:** past 600 ms the fill runs full width and carries a break notch: two 2px Midnight bars rotated 20°, 2px apart, 16px from the right end.
+- **Empty:** only the track (and the budget tick, where shown), and the figure reads "—" in Dim Slate.
 - **Accessibility:** labelled "N milliseconds" or "No time yet".
 
-### Panels / Containers
-A console panel: a titled box one step lighter than the ground.
-- **Corner Style:** 10px.
-- **Background:** Panel Navy, with a 1px Seam stroke.
-- **Shadow Strategy:** none (see Elevation & Depth).
-- **Internal Padding:** 18px. 14px separates the title row from the content.
-- **Title:** the Label style in Slate, with an optional trailing control (for example "Show All" as a link button).
-- **Today strip variant:** the same surface without a title. Four equal figures are separated by 1px × 40px vertical seams, with 14px vertical padding and 18px horizontal padding per figure. Each value uses Figure style in Off-White, over a label in Callout Dim Slate.
+### Home board
+- **Latency readout:** the Display figure and its caption, the 12px stripe with budget tick and scale labels, then Latest and "Slowest 5%" (the 7-day p95) as 4px stripe rows.
+- **Engine column:** an 8px status dot beside "Engine ready" or "Engine offline" (Section), then Callout key/value rows (key in Dim Slate, value in Off-White): Hotkey, Mode, Speech, Cleanup, Permissions. Missing permissions show an Alert Coral line and one small button each.
+- **Today band:** four equal figures (Figure over a Callout Dim Slate label) split by 1×40pt seams, 18pt vertical padding, seams above and below.
+- **Recent:** a Section heading with a "Show All" link, then up to eight rows split by seams.
 
-### Setting Row and Quiet Picker
-- **Setting Row:** the label in Off-White Body on the left and its control on the right. An optional hint in Callout Dim Slate sits 4px below and wraps. Rows inside a panel are separated by a Seam.
-- **Quiet Picker:** a menu picker shown as its value and a chevron, with no bordered popup and no accent cap. It is borderless, tinted Slate and sized to fit.
-- **Toggles:** the native `.switch` style with its label hidden.
-
-### Inputs / Fields
-- **Search field:** a plain text field with a Dim Slate magnifying glass, on Panel Navy. It has a 7px radius, a 1px Seam stroke, is 28px high, has 10px horizontal padding and is 140–220px wide.
-- **Practice editor (onboarding):** a TextEditor on Panel Navy with an 8px radius and a 1px Seam stroke. It is 100px high with 8px padding, and its placeholder is in Dim Slate.
-- **Dictionary and Snippets rows:** native rounded-border text fields. The first column is 200px wide, and a borderless minus-circle delete icon in Dim Slate closes the row.
+### Forms
+Native grouped forms. A row's explanation is the control label's second `Text`, which the system sets as a secondary line. Buttons inside rows are native bordered buttons; per-model actions are `.controlSize(.small)`. Pickers are the form's native popup.
 
 ### Buttons
-- **Shape and style:** native macOS buttons (bordered, borderless, link). They get no custom styling.
-- **Default action:** marked with `.keyboardShortcut(.defaultAction)` (Continue, Get Started, Open SonicFlow).
-- **Text actions in rows:** borderless.
-- **Disabled:** the native disabled state (for example "Show All" with no entries, or "Clear All…" with an empty history).
+Native macOS buttons (bordered, borderless, link) with no custom styling. Default actions use `.keyboardShortcut(.defaultAction)`. Toolbar actions use SF Symbols with a help tag naming the shortcut.
 
-### Lists and Rows
-- **Recent row:** a single line with 9px vertical padding: time, app, one-line text preview, an optional "Edit" tag, a 4px stripe and the ms figure in its speed text colour. Rows are separated by a Seam.
-- **History row:** the full selectable text, then a metadata line in Callout Dim Slate: time, app, word count, an optional Edit tag, a 4px stripe 160px wide, the ms figure and Copy. A context menu offers Copy and Delete. Rows are grouped under day headers in Label Slate.
-- **Empty states:** a native `ContentUnavailableView` in Slate, worded for a stranger ("No dictations yet", "No matches", "No words yet").
+### Lists and Tables
+- **History row:** the full text, then a Callout Dim Slate metadata line (time, app, word count, optional Edit tag, a 160pt stripe, the ms figure). A copy icon appears on hover; the context menu offers Copy and Delete.
+- **Empty states:** native `ContentUnavailableView` in Slate, worded for a stranger, with an add button where one applies.
 
 ### Navigation
-- **Sidebar:** a native source list on Board Navy, using SF Symbols labels (house, clock.arrow.circlepath, character.book.closed, text.insert, textformat, gearshape). Count badges show the number of History, Dictionary and Snippets entries.
-- **Selection:** the system accent colour (see Do's and Don'ts for why).
-
-### Engine Status
-- An 8px dot (Ready Green online, Alert Coral offline) beside "Ready" or "Offline" in semibold. Below it are Callout key/value rows: the key in Dim Slate, the value in Off-White, truncated to one line. If permissions are missing, an Alert Coral "Needs permission" line is followed by one native button for each missing permission.
+- **Sidebar:** SF Symbols labels (house, clock.arrow.circlepath, character.book.closed, text.insert, textformat, cpu, gearshape) with count badges for History, Dictionary and Snippets.
+- **Selection:** the system accent colour. SwiftUI's tint does not reach the native sidebar, and an AccentColor asset needs actool, which the Command Line Tools lack.
 
 ### Pill (floating)
-- **Body:** a 230×40 capsule of Infield Navy at 96% opacity with a 1px Seam stroke and 14px horizontal padding. Its colour scheme is forced dark.
-- **Listening:** an 8px Alert Coral dot, 28 level bars (3px wide, 2px apart, 3–22px tall, cyan, animated linearly over 0.1s), and an elapsed `m:ss` timer in Slate.
-- **Processing:** the dot turns Dim Slate. A 6px Speed Stripe grows in real time from the moment of release, next to a live integer ms count in its speed text colour.
-- **Command mode:** an 11pt semibold `wand.and.stars` symbol in Off-White replaces the dot, and the level bars turn Off-White.
+- **Body:** a 230×40 capsule of Liquid Glass tinted Midnight at 55% on macOS 26 (on earlier systems, Midnight at 96% with a Seam border), forced dark, 14px horizontal padding.
+- **Listening:** an 8px Alert Coral dot, 28 level bars (3px wide, 2px apart, 3–22px tall, cyan, animated linearly over 0.1 s unless Reduce Motion is on), and an elapsed `m:ss` timer in Slate.
+- **Processing:** the dot turns Dim Slate; a 6px Speed Stripe grows in real time from release, next to a live ms count in its speed text colour.
+- **Command mode:** an 11pt semibold `wand.and.stars` in Off-White replaces the dot, and the bars turn Off-White.
+
+## Build
+
+SwiftPM records the deployment target (macOS 14) as the SDK version, which makes macOS 26 draw the app in its compatibility look with no Liquid Glass. `build-app.sh` restamps the binary with the real SDK version (`vtool -set-build-version`) before signing.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** draw every latency as a Speed Stripe on the fixed 0–600 ms scale with the 500 ms budget, so a stripe on Home and a stripe in History compare by length.
-- **Do** colour a time by `Theme.Speed(ms:)`: under 200 ms cyan (#2FD3F0), under 500 ms blue (#3D6BFF fill, #7F9CFF text), otherwise violet (#8B5CF6 fill, #B59BFA text).
-- **Do** separate surfaces with a lightness step and a 1px Seam (#26365F) stroke.
-- **Do** set every changing or columnar number in SF Pro tabular digits.
-- **Do** keep the window in the dark world in either system appearance: `window.appearance = .darkAqua` with an Infield Navy (#0F1A33) window background. The pill forces `.dark` as well. This is a recorded exception to following the system appearance.
-- **Do** leave sidebar selection on the system accent colour. SwiftUI's tint does not reach the native sidebar, an AccentColor asset needs actool (full Xcode only, and this project builds with the Command Line Tools), and a hand-built sidebar would break the native-Mac commitment. This is a recorded exception.
-- **Do** use native macOS controls, SF Symbols and `ContentUnavailableView` before building custom chrome.
+- **Do** draw every latency as a Speed Stripe on the fixed 0–600 ms scale with the 500 ms budget.
+- **Do** colour a time by `Theme.Speed(ms:)`: under 200 ms cyan (#64D2FF), under 500 ms blue (#0A84FF fill, #5EADFF text), otherwise purple (#BF5AF2 fill, #DA8FFF text).
+- **Do** set content on the ground and separate it with space and one-device-pixel seams.
+- **Do** reach for native structure first: grouped `Form`, `Table`, `List`, `.searchable`, toolbar items, `ContentUnavailableView`.
+- **Do** keep the window dark in either system appearance (`window.appearance = .darkAqua`, Midnight background); the pill forces dark too.
+- **Do** lead Home with the 7-day median, so one slow dictation can't paint the headline.
 
 ### Don't:
-- **Don't** use cyan, blue or violet for anything other than a time or the pill's listening level: not progress, success, selection, links or mode.
-- **Don't** set a figure in Speed Blue (#3D6BFF) or Speed Violet (#8B5CF6). Use their text twins.
-- **Don't** rescale a stripe to fit its data, or draw an over-600 ms stripe without the break notch.
-- **Don't** draw shadows, glows or gradients in SwiftUI. The only shadow is the system window shadow under the pill.
-- **Don't** use grey or white stat cards with a single blue accent, or neon glow treatments.
-- **Don't** use SF Mono for figures.
+- **Don't** use cyan, blue or purple for anything but a time or the pill's listening level.
+- **Don't** draw outlined boxes around groups, or stat cards.
+- **Don't** put Liquid Glass behind content; it belongs to the chrome and the pill.
+- **Don't** use neon or saturated navy; the palette stays quiet so the stripes carry the colour.
+- **Don't** set a figure in Speed Blue or Speed Purple, or group digits in a time.
+- **Don't** draw shadows, glows or gradients in SwiftUI.
+- **Don't** use SF Mono for figures, or eyebrow labels above headings.

@@ -78,6 +78,7 @@ final class PillController {
 
 struct PillView: View {
     let model: PillModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 10) {
@@ -111,7 +112,7 @@ struct PillView: View {
                     }
                 }
                 .frame(height: 22)
-                .animation(.linear(duration: 0.1), value: model.levels)
+                .animation(reduceMotion ? nil : .linear(duration: 0.1), value: model.levels)
                 TimelineView(.periodic(from: model.startedAt, by: 1)) { context in
                     Text(Self.elapsed(since: model.startedAt, now: context.date))
                         .foregroundStyle(Theme.secondary)
@@ -122,13 +123,24 @@ struct PillView: View {
         .font(.system(size: 12, weight: .medium).monospacedDigit())
         .padding(.horizontal, 14)
         .frame(width: 230, height: 40)
-        .background(Theme.ground.opacity(0.96), in: Capsule())
-        .overlay(Capsule().stroke(Theme.seam, lineWidth: 1))
+        .pillSurface()
         .environment(\.colorScheme, .dark)
     }
 
     private static func elapsed(since start: Date, now: Date) -> String {
         let seconds = max(0, Int(now.timeIntervalSince(start)))
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+}
+
+private extension View {
+    /// Liquid Glass where the system has it: the pill floats over other apps, which is what glass is for.
+    @ViewBuilder func pillSurface() -> some View {
+        if #available(macOS 26, *) {
+            glassEffect(.regular.tint(Theme.ground.opacity(0.55)), in: Capsule())
+        } else {
+            background(Theme.ground.opacity(0.96), in: Capsule())
+                .overlay(Capsule().strokeBorder(Theme.seam, lineWidth: 1))
+        }
     }
 }

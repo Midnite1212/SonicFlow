@@ -14,6 +14,7 @@ final class SettingsModel {
     var switching = false
     var launchAtLogin = SMAppService.mainApp.status == .enabled
     var loginMessage: String?
+    var confirmingClear = false
 
     func refresh() async {
         devices = AudioDevices.inputs()
@@ -69,72 +70,85 @@ final class SettingsModel {
 }
 
 struct SettingsView: View {
+    let controller: DictationController
     @Bindable var settings: AppSettings
-    let model: SettingsModel
+    @Bindable var model: SettingsModel
     let navigation: Navigation
 
     var body: some View {
-        Group {
-            Panel("Dictation") {
-                SettingRow("Hotkey") {
-                    Picker("Hotkey", selection: $settings.hotkey) {
-                        ForEach(Hotkey.allCases, id: \.self) { Text($0.title).tag($0) }
-                    }
-                    .quietPicker()
+        Form {
+            Section("Dictation") {
+                Picker("Hotkey", selection: $settings.hotkey) {
+                    ForEach(Hotkey.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
-                Seam()
-                SettingRow("Mode", hint: modeHint) {
-                    Picker("Mode", selection: $settings.talkMode) {
-                        ForEach(TalkMode.allCases, id: \.self) { Text($0.title).tag($0) }
-                    }
-                    .quietPicker()
+                Picker(selection: $settings.talkMode) {
+                    ForEach(TalkMode.allCases, id: \.self) { Text($0.title).tag($0) }
+                } label: {
+                    Text("Mode")
+                    Text(modeHint)
                 }
             }
-            Panel("Microphone") {
-                SettingRow("Input") {
-                    Picker("Input", selection: $settings.inputDeviceUID) {
-                        Text("System default").tag(String?.none)
-                        ForEach(model.devices) { Text($0.name).tag(Optional($0.uid)) }
-                    }
-                    .quietPicker()
+            Section("Microphone") {
+                Picker("Input", selection: $settings.inputDeviceUID) {
+                    Text("System default").tag(String?.none)
+                    ForEach(model.devices) { Text($0.name).tag(Optional($0.uid)) }
                 }
-                Seam()
-                SettingRow(
-                    "Keep microphone ready",
-                    hint: "Keeps the moment before you press the hotkey and skips the mic's start-up delay "
-                        + "(up to 0.2 s on some USB mics). macOS shows the mic indicator the whole time; "
-                        + "audio outside a dictation is never sent."
-                ) {
-                    Toggle("Keep microphone ready", isOn: $settings.keepMicrophoneReady)
-                        .toggleStyle(.switch).labelsHidden()
-                }
-            }
-            Panel("Engine") {
-                SettingRow("Models", hint: "Choose, download and add speech and cleanup models in Models.") {
-                    Button("Open Models") { navigation.pane = .models }
-                }
-                Seam()
-                HStack {
-                    if let engineMessage = model.engineMessage {
-                        Text(engineMessage).font(.callout).foregroundStyle(Theme.tertiary)
-                    }
-                    Spacer()
-                    Button("Restart Engine") { model.restartEngine() }
-                }
-            }
-            Panel("General") {
-                SettingRow("Launch SonicFlow at login", hint: model.loginMessage) {
-                    Toggle(
-                        "Launch SonicFlow at login",
-                        isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) })
+                Toggle(isOn: $settings.keepMicrophoneReady) {
+                    Text("Keep microphone ready")
+                    Text(
+                        "Keeps the moment before you press the hotkey and skips the mic's start-up delay "
+                            + "(up to 0.2 s on some USB mics). macOS shows the mic indicator the whole time; "
+                            + "audio outside a dictation is never sent."
                     )
-                    .toggleStyle(.switch).labelsHidden()
+                }
+            }
+            Section("History") {
+                Toggle(isOn: $settings.saveHistory) {
+                    Text("Save history on this Mac")
+                    Text(
+                        settings.saveHistory
+                            ? "Saved in Application Support, readable only by you."
+                            : "Kept in memory until SonicFlow quits. Nothing is written to disk."
+                    )
+                }
+                Picker("Keep for", selection: $settings.historyRetention) {
+                    ForEach(HistoryRetention.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .disabled(!settings.saveHistory)
+                LabeledContent("Dictation history") {
+                    Button("Clear History…") { model.confirmingClear = true }
+                        .disabled(controller.history.entries.isEmpty)
+                }
+            }
+            Section("Engine") {
+                LabeledContent {
+                    Button("Open Models") { navigation.pane = .models }
+                } label: {
+                    Text("Models")
+                    Text("Choose, download and add speech and cleanup models.")
+                }
+                LabeledContent {
+                    Button("Restart") { model.restartEngine() }
+                } label: {
+                    Text("Speech engine")
+                    if let engineMessage = model.engineMessage { Text(engineMessage) }
+                }
+            }
+            Section("General") {
+                Toggle(isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) })) {
+                    Text("Launch SonicFlow at login")
+                    if let message = model.loginMessage { Text(message) }
                 }
             }
         }
-        .panelColumn()
+        .settingsForm()
         .navigationTitle("Settings")
         .task { await model.refresh() }
+        .confirmationDialog("Clear all dictation history?", isPresented: $model.confirmingClear) {
+            Button("Clear History", role: .destructive) { controller.clearHistory() }
+        } message: {
+            Text(settings.saveHistory ? "This also deletes the saved copy on this Mac." : "This can't be undone.")
+        }
     }
 
     private var modeHint: String {

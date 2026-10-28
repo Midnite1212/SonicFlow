@@ -9,19 +9,23 @@ struct HomeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top, spacing: 16) {
-                    LatencyPanel(controller: controller)
-                        .frame(maxHeight: .infinity, alignment: .top)
-                    EnginePanel(controller: controller, settingsModel: settingsModel)
-                        .frame(width: 290)
-                        .frame(maxHeight: .infinity, alignment: .top)
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top, spacing: 0) {
+                    LatencyBoard(controller: controller)
+                        .padding(.trailing, 32)
+                    Rectangle().fill(Theme.seam).frame(width: 1)
+                    EngineColumn(controller: controller, settingsModel: settingsModel)
+                        .frame(width: 250)
+                        .padding(.leading, 32)
                 }
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, 32)
                 TodayStrip(stats: controller.stats)
-                RecentPanel(controller: controller, navigation: navigation)
+                RecentList(controller: controller, navigation: navigation)
+                    .padding(.top, 32)
             }
-            .padding(24)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 28)
             .frame(maxWidth: 1100, alignment: .topLeading)
             .frame(maxWidth: .infinity, alignment: .top)
         }
@@ -31,7 +35,8 @@ struct HomeView: View {
     }
 }
 
-private struct LatencyPanel: View {
+/// The typical speed leads, so one slow dictation can't paint the headline; the latest sits below.
+private struct LatencyBoard: View {
     let controller: DictationController
 
     var body: some View {
@@ -39,39 +44,41 @@ private struct LatencyPanel: View {
         let week = Date().addingTimeInterval(-7 * 86_400)
         let median = controller.history.latencyPercentile(0.5, since: week)
         let p95 = controller.history.latencyPercentile(0.95, since: week)
-        Panel("Release to text") {
-            if let latest {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("\(Int(latest.latencyMs.rounded()))")
+        VStack(alignment: .leading, spacing: 0) {
+            if let hero = median ?? latest?.latencyMs {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(verbatim: "\(Int(hero.rounded()))")
                         .font(.system(size: 64, weight: .semibold).monospacedDigit())
-                        .foregroundStyle(Theme.Speed(ms: latest.latencyMs).text)
+                        .foregroundStyle(Theme.Speed(ms: hero).text)
                     Text("ms").font(.title2.weight(.medium)).foregroundStyle(Theme.secondary)
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(latest.date, style: .time)
-                        if let app = latest.appName { Text(app) }
-                    }
-                    .font(.callout)
-                    .foregroundStyle(Theme.tertiary)
                 }
-                SpeedStripe(ms: latest.latencyMs, height: 12, showsBudget: true)
+                Text(median == nil ? "Release to text, latest dictation" : "Release to text, median of the last 7 days")
+                    .foregroundStyle(Theme.secondary)
+                SpeedStripe(ms: hero, height: 12, showsBudget: true)
+                    .padding(.top, 22)
                 ScaleLabels()
-                VStack(spacing: 8) {
-                    StripeRow(label: "7-day median", ms: median)
-                    StripeRow(label: "7-day p95", ms: p95)
+                    .padding(.top, 2)
+                VStack(spacing: 10) {
+                    StripeRow(label: "Latest", ms: latest?.latencyMs)
+                    StripeRow(label: "Slowest 5%", ms: p95)
                 }
-                .padding(.top, 4)
+                .padding(.top, 20)
             } else {
                 Text("No dictations yet")
                     .font(.title.weight(.semibold))
                     .foregroundStyle(Theme.text)
                 Text("Hold \(controller.settings.hotkey.title) in any text field, speak, and release.")
                     .foregroundStyle(Theme.secondary)
+                    .padding(.top, 4)
                 SpeedStripe(ms: nil, height: 12, showsBudget: true)
+                    .padding(.top, 22)
                 ScaleLabels()
+                    .padding(.top, 2)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
+
 }
 
 private struct ScaleLabels: View {
@@ -97,10 +104,10 @@ private struct StripeRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(label).foregroundStyle(Theme.secondary).frame(width: 96, alignment: .leading)
+            Text(label).foregroundStyle(Theme.secondary).frame(width: 84, alignment: .leading)
             SpeedStripe(ms: ms, height: 4)
             Text(ms.map(Format.ms) ?? "—")
-                .font(.callout.monospacedDigit())
+                .monospacedDigit()
                 .foregroundStyle(ms.map { Theme.Speed(ms: $0).text } ?? Theme.tertiary)
                 .frame(width: 64, alignment: .trailing)
         }
@@ -108,7 +115,7 @@ private struct StripeRow: View {
     }
 }
 
-private struct EnginePanel: View {
+private struct EngineColumn: View {
     let controller: DictationController
     let settingsModel: SettingsModel
 
@@ -116,33 +123,36 @@ private struct EnginePanel: View {
         let online = controller.state != .offline
         let permissions = controller.permissions
         let missing = !permissions.microphone || !permissions.accessibility || !controller.hotkeyActive
-        Panel("Engine") {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Circle().fill(online ? Theme.ready : Theme.alert).frame(width: 8, height: 8)
-                    Text(online ? "Ready" : "Offline").fontWeight(.semibold)
-                }
-                KeyValue("Hotkey", "\(controller.settings.hotkey.title), \(controller.settings.talkMode == .hold ? "hold" : "tap")")
-                KeyValue("Speech", settingsModel.backends?.asr.active ?? "—")
-                KeyValue("Cleanup", settingsModel.backends?.cleanup.active ?? "—")
-                Divider().overlay(Theme.seam)
-                if missing {
-                    Text("Needs permission").foregroundStyle(Theme.alert)
-                    if !permissions.microphone {
-                        Button("Allow Microphone…") { Permissions.openSettings(.microphone) }
-                    }
-                    if !controller.hotkeyActive {
-                        Button("Allow Input Monitoring…") { Permissions.openSettings(.inputMonitoring) }
-                    }
-                    if !permissions.accessibility {
-                        Button("Allow Accessibility…") { Permissions.openSettings(.accessibility) }
-                    }
-                } else {
-                    KeyValue("Permissions", "All granted")
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Circle().fill(online ? Theme.ready : Theme.alert).frame(width: 8, height: 8)
+                Text(online ? "Engine ready" : "Engine offline")
+                    .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
             }
-            .foregroundStyle(Theme.text)
+            .padding(.top, 10)
+            .padding(.bottom, 4)
+            KeyValue("Hotkey", controller.settings.hotkey.title)
+            KeyValue("Mode", controller.settings.talkMode == .hold ? "Hold to talk" : "Tap to toggle")
+            KeyValue("Speech", settingsModel.backends?.asr.active ?? "—")
+            KeyValue("Cleanup", settingsModel.backends?.cleanup.active ?? "—")
+            if missing {
+                Text("Needs permission").foregroundStyle(Theme.alert).padding(.top, 4)
+                if !permissions.microphone {
+                    Button("Allow Microphone…") { Permissions.openSettings(.microphone) }
+                }
+                if !controller.hotkeyActive {
+                    Button("Allow Input Monitoring…") { Permissions.openSettings(.inputMonitoring) }
+                }
+                if !permissions.accessibility {
+                    Button("Allow Accessibility…") { Permissions.openSettings(.accessibility) }
+                }
+            } else {
+                KeyValue("Permissions", "All granted")
+            }
         }
+        .controlSize(.small)
+        .foregroundStyle(Theme.text)
     }
 }
 
@@ -165,6 +175,7 @@ private struct KeyValue: View {
     }
 }
 
+/// Today's figures as a ruled band, like the lap counters under a timing board.
 private struct TodayStrip: View {
     let stats: UsageStats
 
@@ -173,17 +184,17 @@ private struct TodayStrip: View {
         let week = stats.totals(lastDays: 7)
         let streak = stats.streak()
         HStack(spacing: 0) {
-            Figure(value: today.words.formatted(), label: "words today")
-            Seam()
-            Figure(value: week.wordsPerMinute.map { "\(Int($0.rounded())) wpm" } ?? "—", label: "speaking, 7 days")
-            Seam()
+            Figure(value: today.words.formatted(), label: "words today", leading: 0)
+            Rule()
+            Figure(value: week.wordsPerMinute.map { "\(Int($0.rounded())) wpm" } ?? "—", label: "speaking pace, 7 days")
+            Rule()
             Figure(value: Self.duration(stats.totals(lastDays: nil).timeSavedSeconds()), label: "saved vs typing")
-            Seam()
+            Rule()
             Figure(value: streak == 1 ? "1 day" : "\(streak) days", label: "streak")
         }
-        .padding(.vertical, 14)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.seam, lineWidth: 1))
+        .padding(.vertical, 18)
+        .overlay(alignment: .top) { Seam() }
+        .overlay(alignment: .bottom) { Seam() }
     }
 
     static func duration(_ seconds: Double) -> String {
@@ -194,45 +205,49 @@ private struct TodayStrip: View {
     private struct Figure: View {
         let value: String
         let label: String
+        var leading: CGFloat = 24
 
         var body: some View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(value).font(.title2.weight(.semibold).monospacedDigit()).foregroundStyle(Theme.text)
                 Text(label).font(.callout).foregroundStyle(Theme.tertiary)
             }
-            .padding(.horizontal, 18)
+            .padding(.leading, leading)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
         }
     }
 
-    private struct Seam: View {
+    private struct Rule: View {
         var body: some View { Rectangle().fill(Theme.seam).frame(width: 1, height: 40) }
     }
 }
 
-private struct RecentPanel: View {
+private struct RecentList: View {
     let controller: DictationController
     let navigation: Navigation
 
     var body: some View {
-        let entries = Array(controller.history.entries.prefix(6))
-        Panel(
-            "Recent",
-            trailing: AnyView(
+        let entries = Array(controller.history.entries.prefix(8))
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Recent").font(.headline).foregroundStyle(Theme.text).accessibilityAddTraits(.isHeader)
+                Spacer()
                 Button("Show All") { navigation.pane = .history }
                     .buttonStyle(.link)
+                    .focusable(false)
                     .foregroundStyle(Theme.secondary)
                     .disabled(entries.isEmpty)
-            )
-        ) {
+            }
             if entries.isEmpty {
                 Text("What you dictate shows up here, with how long it took.")
                     .foregroundStyle(Theme.secondary)
+                    .padding(.top, 4)
             } else {
                 VStack(spacing: 0) {
                     ForEach(entries) { entry in
                         RecentRow(entry: entry)
-                        if entry.id != entries.last?.id { Divider().overlay(Theme.seam) }
+                        if entry.id != entries.last?.id { Seam() }
                     }
                 }
             }

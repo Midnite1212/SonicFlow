@@ -34,11 +34,12 @@ struct OnboardingView: View {
                 .frame(maxWidth: 520)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(32)
-            Divider().overlay(Theme.seam)
+            Seam()
             footer.padding(16)
         }
         .foregroundStyle(Theme.text)
         .background(Theme.ground)
+        .navigationTitle("SonicFlow")
     }
 
     @ViewBuilder private var content: some View {
