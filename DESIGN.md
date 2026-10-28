@@ -114,7 +114,7 @@ components:
 
 SonicFlow is the timing board at a velodrome after dark. The content is set straight on a deep, quiet navy: figures, stripes and hairline rules, with no boxes around them. Every latency is drawn as a livery stripe, and its length is its time on one fixed scale, so any two stripes anywhere in the app compare by length. Cyan, blue and purple, the logo's hues in Apple's calibrated system versions, appear only as that speed scale.
 
-Everything around the content is the Mac's own: the Liquid Glass sidebar and toolbar, grouped forms, tables, search and glass buttons. On Home, the engine status and Today's figures float on glass panels; the readings themselves (the latency board and Recent) stay on the ground. A faint ambient light of the speed hues lies behind the whole window, because glass only shows by bending what is behind it; on flat navy it reads as a plain panel. The one glass surface SonicFlow draws itself is the pill, because it floats over other apps.
+Everything around the content is the Mac's own: the Liquid Glass sidebar and toolbar, tables, lists, search and glass buttons. Groups float on glass panels in every pane: Home's engine status and Today figures, each settings group, and the History, Dictionary and Snippets lists. Home's readings (the latency board and Recent) stay on the ground. A faint ambient light of the speed hues lies behind the whole window, because glass only shows by bending what is behind it; on flat navy it reads as a plain panel. The one glass surface SonicFlow draws itself is the pill, because it floats over other apps.
 
 The window is opened now and then, so it is calm. It shows speed first, then whether the engine is ready, then what was said.
 
@@ -124,7 +124,7 @@ The world rejects the category defaults: grey or white stat cards with one blue 
 - Deep navy ground; content unboxed, separated by one-device-pixel seams.
 - Cyan, blue and purple mean speed and nothing else: under 200 ms, under 500 ms, slower.
 - One stripe scale everywhere: 0–600 ms, with a tick at 100 ms, where a response starts to feel instant.
-- Native chrome: Liquid Glass sidebar and toolbar, grouped forms, tables, `.searchable`.
+- Native chrome: Liquid Glass sidebar and toolbar, glass panels for groups, tables, `.searchable`.
 - SF Pro throughout, tabular digits for every figure.
 - The same dark world in both system appearances.
 
@@ -190,19 +190,19 @@ The main window is a native `NavigationSplitView` with a unified toolbar (`scene
 
 - **Sidebar:** the system Liquid Glass sidebar, 200–240pt (ideal 210), in three sections: Home and History; Personalize (Dictionary, Snippets, Styles); Setup (Models, Settings). ⌘1–⌘7 select them from the View menu.
 - **Home** is a scrolling timing board, max 1100pt wide, with 32pt horizontal and 28pt vertical insets. The top row holds the latency readout beside the glass engine panel, 32pt apart. The glass Today band follows, then Recent.
-- **Settings, Styles and Models** are grouped `Form`s (`formStyle(.grouped)`), max 720pt, centred on the ground. Models' Recommended / Browse / My Models switch is a segmented control in the toolbar's principal slot.
-- **History** is a native inset `List`, searchable from the toolbar (⌘F), with selectable rows: ⌘C copies, Delete removes. Day headers are plain rows, because sticky section headers draw a grey material bar.
-- **Dictionary and Snippets** are editable `Table`s with the add button in the toolbar (⌘N), Delete on the selection with undo, and a one-paragraph footer above a seam.
+- **Settings, Styles and Models** are `glassColumn()`s: a centred scrolling column, max 760pt, 32pt horizontal and 24pt vertical insets, 28pt between `GlassSection`s. Models' Recommended / Browse / My Models switch is a segmented control in the toolbar's principal slot.
+- **History** is a native inset `List` on a glass panel inset 24pt, searchable from the toolbar (⌘F), with selectable rows: ⌘C copies, Delete removes. Day headers are plain rows, because sticky section headers draw a grey material bar.
+- **Dictionary and Snippets** are editable `Table`s on a glass panel inset 24pt, with the add button in the toolbar (⌘N), Delete on the selection with undo, and a one-paragraph Dim Slate footer below.
 - **Onboarding** is a centred column, max 520pt, with 32pt padding and a seam-topped footer holding step dots and Back/Continue.
 - **Rows** use fixed columns so figures align. Recent rows: time 66pt, app 80pt, text flexible, stripe 96pt, ms 64pt trailing. History rows: stripe 160pt. Stripe rows: label 84pt, stripe flexible, ms 64pt trailing.
 - **The pill** is a 230×40 non-activating panel, centred 24pt above the bottom of the visible frame on the screen with the mouse. It joins all Spaces and ignores the mouse.
 
 ## Elevation & Depth
 
-Content is flat: no SwiftUI shadows or glows, and no gradient except the ambient light behind the window. Depth belongs to the system: the Liquid Glass sidebar and toolbar float over the content and the ambient light, and grouped forms draw their own rounded section fills.
+Content is flat: no SwiftUI shadows or glows, and no gradient except the ambient light behind the window. Depth comes from Liquid Glass: the sidebar, toolbar and every group's panel float over the ambient light.
 
 ### Named Rules
-**The Glass Floats Rule.** Liquid Glass is for surfaces that float: the system sidebar and toolbar, glass buttons, the pill over other apps, and on Home the engine panel and Today band (`glassPanel()`, 22pt continuous corners). The readings (latency board, Recent, History, forms) stay on the ground; glass never stacks on glass.
+**The Glass Floats Rule.** Liquid Glass is for surfaces that float: the system sidebar and toolbar, glass buttons, the pill over other apps, and the group panels (`glassPanel()`: 22pt continuous corners on Home, 20pt for `GlassSection` and lists). Home's latency board and Recent stay on the ground; glass never stacks on glass.
 
 **The Seam, Not Box Rule.** Separate groups of content with space and a one-device-pixel Seam (`Seam()`), never with an outlined box.
 
@@ -231,8 +231,10 @@ A latency drawn as a livery stripe. The same component appears on Home, every Re
 ### Typing test
 A sheet from Settings › Typing speed (or Home's "Measure Yours"): a passage on Panel, characters turning Off-White when right and Alert Coral when wrong, a text field, a live wpm figure, and Cancel / Use This Speed. Net wpm counts correctly typed words, five characters to a word. Only the number is saved; time saved and Home's typing line use it.
 
-### Forms
-Native grouped forms. A row's explanation is the control label's second `Text`, which the system sets as a secondary line. Buttons inside rows are native bordered buttons; per-model actions are `.controlSize(.small)`. Pickers are the form's native popup.
+### Glass sections
+- **GlassSection:** a `headline` title in Off-White (with an optional trailing control, such as Styles' "Add App"), then the rows on a glass panel with 20pt horizontal padding, then an optional Callout Dim Slate footer.
+- **GlassRow:** the label in Off-White Body with an optional Callout Dim Slate hint 3pt below, and the control on the right; 12pt vertical padding; rows separate with `Seam()`.
+- **Controls:** pickers are native menu popups sized to their value (`rowPicker()`), toggles are switches without labels (`rowSwitch()`), buttons are glass; per-model actions are `.controlSize(.small)`.
 
 ### Buttons
 Glass buttons (`.glass(.regular)` with a clear tint, so the green control tint doesn't colour them) in forms and on Home; bordered before macOS 26. Links and borderless buttons where text is the action. Default actions use `.keyboardShortcut(.defaultAction)`. Toolbar actions use SF Symbols with a help tag naming the shortcut.

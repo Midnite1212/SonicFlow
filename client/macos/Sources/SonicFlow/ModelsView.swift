@@ -134,11 +134,9 @@ struct ModelsView: View {
     @Bindable var model: ModelsModel
 
     var body: some View {
-        Form {
+        Group {
             if let message = model.message {
-                Section {
-                    Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Theme.alert)
-                }
+                Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Theme.alert)
             }
             switch model.tab {
             case .recommended: recommended
@@ -146,7 +144,7 @@ struct ModelsView: View {
             case .mine: mine
             }
         }
-        .settingsForm()
+        .glassColumn()
         .navigationTitle("Models")
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -166,26 +164,31 @@ struct ModelsView: View {
 
     @ViewBuilder private var recommended: some View {
         if let list = model.list {
-            ModelSection(title: "Speech recognition", models: list.models(in: .recommended, kind: .asr), store: model)
-            Section {
+            GlassSection("Speech recognition") {
+                ModelRows(models: list.models(in: .recommended, kind: .asr), store: model, showsKind: false)
+            }
+            GlassSection(
+                "Cleanup",
+                footer: "Release-to-text time and word error rate on the 21-clip test set, measured on an M3 Pro unless marked this Mac. Cleanup times include the speech model. Benchmark any installed model from its ⋯ menu."
+            ) {
                 ModelRows(models: list.models(in: .recommended, kind: .cleanup), store: model, showsKind: false)
-            } header: {
-                Text("Cleanup")
-            } footer: {
-                Text("Release-to-text time and word error rate on the 21-clip test set, measured on an M3 Pro unless marked this Mac. Cleanup times include the speech model. Benchmark any installed model from its ⋯ menu.")
-                    .font(.callout)
-                    .foregroundStyle(Theme.tertiary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
     @ViewBuilder private var browse: some View {
         if let list = model.list {
-            ModelSection(title: "Speech recognition", models: list.models(in: .catalog, kind: .asr), store: model)
-            ModelSection(title: "Cleanup", models: list.models(in: .catalog, kind: .cleanup), store: model)
+            GlassSection("Speech recognition") {
+                ModelRows(models: list.models(in: .catalog, kind: .asr), store: model, showsKind: false)
+            }
+            GlassSection("Cleanup") {
+                ModelRows(models: list.models(in: .catalog, kind: .cleanup), store: model, showsKind: false)
+            }
         }
-        Section {
+        GlassSection(
+            "Search Hugging Face",
+            footer: "Searching contacts Hugging Face. Only MLX builds are listed; they run on this Mac once downloaded."
+        ) {
             HStack(spacing: 10) {
                 TextField("Search MLX models, e.g. whisper or llama", text: $model.query)
                     .textFieldStyle(.roundedBorder)
@@ -194,48 +197,46 @@ struct ModelsView: View {
                     Text("Cleanup").tag(ModelInfo.Kind.cleanup)
                     Text("Speech").tag(ModelInfo.Kind.asr)
                 }
-                .labelsHidden()
-                .fixedSize()
+                .rowPicker()
                 Button("Search") { Task { await model.search() } }
                     .disabled(model.query.trimmingCharacters(in: .whitespaces).isEmpty || model.searching)
             }
+            .padding(.vertical, 12)
             if model.searching {
-                ProgressView().controlSize(.small)
+                ProgressView().controlSize(.small).padding(.bottom, 12)
             } else if model.searched && model.results.isEmpty {
-                Text("No MLX models matched.").foregroundStyle(Theme.secondary)
+                Text("No MLX models matched.").foregroundStyle(Theme.secondary).padding(.bottom, 12)
             }
             ForEach(model.results) { result in
-                LabeledContent {
+                Seam()
+                GlassRow(
+                    result.source,
+                    hint: "\(result.family == "mlx-lm" ? "MLX" : result.family.capitalized) · \((result.downloads ?? 0).formatted()) downloads"
+                ) {
                     if result.added {
                         Text("Added").foregroundStyle(Theme.tertiary)
                     } else {
                         Button("Add and Download") { Task { await model.add(source: result.source) } }
                             .controlSize(.small)
                     }
-                } label: {
-                    Text(result.source)
-                    Text("\(result.family == "mlx-lm" ? "MLX" : result.family.capitalized) · \((result.downloads ?? 0).formatted()) downloads")
                 }
             }
-        } header: {
-            Text("Search Hugging Face")
-        } footer: {
-            Text("Searching contacts Hugging Face. Only MLX builds are listed; they run on this Mac once downloaded.")
-                .font(.callout)
-                .foregroundStyle(Theme.tertiary)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
     @ViewBuilder private var mine: some View {
-        Section("Add a model") {
-            LabeledContent {
+        GlassSection("Add a model") {
+            GlassRow(
+                "Model folder on this Mac",
+                hint: "An MLX model you downloaded: a folder with config.json and .safetensors weights."
+            ) {
                 Button("Choose Folder…") { Task { await model.chooseFolder() } }
-            } label: {
-                Text("Model folder on this Mac")
-                Text("An MLX model you downloaded: a folder with config.json and .safetensors weights.")
             }
-            LabeledContent {
+            Seam()
+            GlassRow(
+                "Hugging Face repo",
+                hint: "Any MLX build, e.g. mlx-community/whisper-small-mlx. Downloads after adding."
+            ) {
                 HStack {
                     TextField("org/model", text: $model.repo)
                         .textFieldStyle(.roundedBorder)
@@ -244,18 +245,17 @@ struct ModelsView: View {
                     Button("Add") { Task { await addRepo() } }
                         .disabled(!model.repo.contains("/"))
                 }
-            } label: {
-                Text("Hugging Face repo")
-                Text("Any MLX build, e.g. mlx-community/whisper-small-mlx. Downloads after adding.")
             }
+            Seam()
             ollamaRows
         }
         if let list = model.list {
             let custom = list.models.filter { $0.group == .custom }
-            Section("Your models") {
+            GlassSection("Your models") {
                 if custom.isEmpty {
                     Text("Models you add appear here, ready to use for speech or cleanup.")
                         .foregroundStyle(Theme.secondary)
+                        .padding(.vertical, 12)
                 } else {
                     ModelRows(models: custom, store: model, showsKind: true)
                 }
@@ -265,28 +265,27 @@ struct ModelsView: View {
 
     @ViewBuilder private var ollamaRows: some View {
         let ollama = model.ollama
-        LabeledContent {
+        let running = ollama?.running == true
+        GlassRow(
+            "Ollama",
+            hint: !running
+                ? "Ollama isn't running. Install it from ollama.com or open the app, then refresh."
+                : ollama?.models.isEmpty == true
+                    ? "Ollama is running but has no models. Pull one with `ollama pull`."
+                    : "Cleanup models you pulled in Ollama."
+        ) {
             Button("Refresh") { Task { await model.loadOllama() } }
-        } label: {
-            Text("Ollama")
-            if let ollama, ollama.running {
-                Text(ollama.models.isEmpty ? "Ollama is running but has no models. Pull one with `ollama pull`." : "Cleanup models you pulled in Ollama.")
-            } else {
-                Text("Ollama isn't running. Install it from ollama.com or open the app, then refresh.")
-            }
         }
-        if let ollama, ollama.running {
+        if let ollama, running {
             ForEach(ollama.models) { pulled in
-                LabeledContent {
+                Seam()
+                GlassRow(pulled.name, hint: ModelInfo.size(pulled.size)) {
                     if pulled.added {
                         Text("Added").foregroundStyle(Theme.tertiary)
                     } else {
                         Button("Add") { Task { await model.add(source: pulled.name, family: "ollama") } }
                             .controlSize(.small)
                     }
-                } label: {
-                    Text(pulled.name)
-                    if let size = ModelInfo.size(pulled.size) { Text(size) }
                 }
             }
         }
@@ -300,18 +299,6 @@ struct ModelsView: View {
     }
 }
 
-private struct ModelSection: View {
-    let title: String
-    let models: [ModelInfo]
-    let store: ModelsModel
-
-    var body: some View {
-        Section(title) {
-            ModelRows(models: models, store: store, showsKind: false)
-        }
-    }
-}
-
 private struct ModelRows: View {
     let models: [ModelInfo]
     let store: ModelsModel
@@ -320,6 +307,7 @@ private struct ModelRows: View {
     var body: some View {
         ForEach(models) { model in
             ModelRow(model: model, store: store, showsKind: showsKind)
+            if model.id != models.last?.id { Seam() }
         }
     }
 }
@@ -390,7 +378,7 @@ private struct ModelRow: View {
                 .fixedSize()
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 12)
     }
 
     private var details: String {

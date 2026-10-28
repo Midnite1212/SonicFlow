@@ -77,87 +77,95 @@ struct SettingsView: View {
     let navigation: Navigation
 
     var body: some View {
-        Form {
-            Section("Dictation") {
-                Picker("Hotkey", selection: $settings.hotkey) {
-                    ForEach(Hotkey.allCases, id: \.self) { Text($0.title).tag($0) }
+        Group {
+            GlassSection("Dictation") {
+                GlassRow("Hotkey") {
+                    Picker("Hotkey", selection: $settings.hotkey) {
+                        ForEach(Hotkey.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .rowPicker()
                 }
-                Picker(selection: $settings.talkMode) {
-                    ForEach(TalkMode.allCases, id: \.self) { Text($0.title).tag($0) }
-                } label: {
-                    Text("Mode")
-                    Text(modeHint)
-                }
-            }
-            Section("Microphone") {
-                Picker("Input", selection: $settings.inputDeviceUID) {
-                    Text("System default").tag(String?.none)
-                    ForEach(model.devices) { Text($0.name).tag(Optional($0.uid)) }
-                }
-                Toggle(isOn: $settings.keepMicrophoneReady) {
-                    Text("Keep microphone ready")
-                    Text(
-                        "Keeps the moment before you press the hotkey and skips the mic's start-up delay "
-                            + "(up to 0.2 s on some USB mics). macOS shows the mic indicator the whole time; "
-                            + "audio outside a dictation is never sent."
-                    )
+                Seam()
+                GlassRow("Mode", hint: modeHint) {
+                    Picker("Mode", selection: $settings.talkMode) {
+                        ForEach(TalkMode.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .rowPicker()
                 }
             }
-            Section("History") {
-                Toggle(isOn: $settings.saveHistory) {
-                    Text("Save history on this Mac")
-                    Text(
-                        settings.saveHistory
-                            ? "Saved in Application Support, readable only by you."
-                            : "Kept in memory until SonicFlow quits. Nothing is written to disk."
-                    )
+            GlassSection("Microphone") {
+                GlassRow("Input") {
+                    Picker("Input", selection: $settings.inputDeviceUID) {
+                        Text("System default").tag(String?.none)
+                        ForEach(model.devices) { Text($0.name).tag(Optional($0.uid)) }
+                    }
+                    .rowPicker()
                 }
-                Picker("Keep for", selection: $settings.historyRetention) {
-                    ForEach(HistoryRetention.allCases, id: \.self) { Text($0.title).tag($0) }
+                Seam()
+                GlassRow(
+                    "Keep microphone ready",
+                    hint: "Keeps the moment before you press the hotkey and skips the mic's start-up delay "
+                        + "(up to 0.2 s on some USB mics). macOS shows the mic indicator the whole time; "
+                        + "audio outside a dictation is never sent."
+                ) {
+                    Toggle("Keep microphone ready", isOn: $settings.keepMicrophoneReady).rowSwitch()
                 }
-                .disabled(!settings.saveHistory)
-                LabeledContent("Dictation history") {
+            }
+            GlassSection("History") {
+                GlassRow(
+                    "Save history on this Mac",
+                    hint: settings.saveHistory
+                        ? "Saved in Application Support, readable only by you."
+                        : "Kept in memory until SonicFlow quits. Nothing is written to disk."
+                ) {
+                    Toggle("Save history on this Mac", isOn: $settings.saveHistory).rowSwitch()
+                }
+                Seam()
+                GlassRow("Keep for") {
+                    Picker("Keep for", selection: $settings.historyRetention) {
+                        ForEach(HistoryRetention.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .rowPicker()
+                    .disabled(!settings.saveHistory)
+                }
+                Seam()
+                GlassRow("Dictation history") {
                     Button("Clear History…") { model.confirmingClear = true }
                         .disabled(controller.history.entries.isEmpty)
                 }
             }
-            Section("Typing speed") {
-                LabeledContent {
+            GlassSection("Typing speed") {
+                GlassRow(
+                    settings.typingWordsPerMinute.map { "\(Int($0.rounded())) wpm" } ?? "Not measured",
+                    hint: settings.typingWordsPerMinute == nil
+                        ? "Time saved assumes an average typist at \(Int(TypingTest.averageWordsPerMinute)) wpm until you take the one-minute test."
+                        : "Time saved compares dictating with typing at your own speed."
+                ) {
                     Button(settings.typingWordsPerMinute == nil ? "Take Typing Test…" : "Retake Test…") {
                         model.typingTest = TypingTestModel()
                     }
-                } label: {
-                    if let speed = settings.typingWordsPerMinute {
-                        Text("\(Int(speed.rounded())) wpm")
-                        Text("Time saved compares dictating with typing at your own speed.")
-                    } else {
-                        Text("Not measured")
-                        Text("Time saved assumes an average typist at \(Int(TypingTest.averageWordsPerMinute)) wpm until you take the one-minute test.")
-                    }
                 }
             }
-            Section("Engine") {
-                LabeledContent {
+            GlassSection("Engine") {
+                GlassRow("Models", hint: "Choose, download and add speech and cleanup models.") {
                     Button("Open Models") { navigation.pane = .models }
-                } label: {
-                    Text("Models")
-                    Text("Choose, download and add speech and cleanup models.")
                 }
-                LabeledContent {
+                Seam()
+                GlassRow("Speech engine", hint: model.engineMessage) {
                     Button("Restart") { model.restartEngine() }
-                } label: {
-                    Text("Speech engine")
-                    if let engineMessage = model.engineMessage { Text(engineMessage) }
                 }
             }
-            Section("General") {
-                Toggle(isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) })) {
-                    Text("Launch SonicFlow at login")
-                    if let message = model.loginMessage { Text(message) }
+            GlassSection("General") {
+                GlassRow("Launch SonicFlow at login", hint: model.loginMessage) {
+                    Toggle(
+                        "Launch SonicFlow at login",
+                        isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) })
+                    )
+                    .rowSwitch()
                 }
             }
         }
-        .settingsForm()
+        .glassColumn()
         .navigationTitle("Settings")
         .task { await model.refresh() }
         .sheet(item: $model.typingTest) { test in

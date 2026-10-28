@@ -151,14 +151,18 @@ private struct VocabularyPane<Rows: View>: View {
                 rows
                     .alternatingRowBackgrounds(.disabled)
                     .scrollContentBackground(.hidden)
+                    .padding(6)
+                    .glassPanel(cornerRadius: 20)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
             }
             Text(footer)
                 .font(.callout)
                 .foregroundStyle(Theme.tertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .overlay(alignment: .top) { Seam() }
+                .padding(.horizontal, 30)
+                .padding(.top, 10)
+                .padding(.bottom, 20)
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

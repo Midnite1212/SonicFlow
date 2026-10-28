@@ -56,6 +56,12 @@ struct HistoryView: View {
             }
             .listStyle(.inset)
             .alternatingRowBackgrounds(.disabled)
+            .scrollContentBackground(.hidden)
+            .padding(.vertical, 6)
+            .glassPanel(cornerRadius: 20)
+            .padding(.horizontal, 24)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
             .onCopyCommand { [NSItemProvider(object: selectedText(in: entries) as NSString)] }
             .onDeleteCommand {
                 for entry in entries where model.selection.contains(entry.id) { controller.deleteFromHistory(entry) }

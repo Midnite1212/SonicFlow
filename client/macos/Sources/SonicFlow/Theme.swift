@@ -128,13 +128,96 @@ extension View {
         }
     }
 
-    /// A System Settings–style grouped form on the navy ground.
-    func settingsForm() -> some View {
-        formStyle(.grouped)
-            .glassButton()
-            .frame(maxWidth: 720)
-            .frame(maxWidth: .infinity)
-            .paneBackground()
+    /// A pane of glass sections: a centred scrolling column over the ambient light.
+    func glassColumn() -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) { self }
+                .glassButton()
+                .padding(.horizontal, 32)
+                .padding(.vertical, 24)
+                .frame(maxWidth: 760, alignment: .topLeading)
+                .frame(maxWidth: .infinity)
+        }
+        .paneBackground()
+    }
+}
+
+/// A titled group of rows on a glass panel, matching Home's engine panel. Rows separate with `Seam()`.
+struct GlassSection<Content: View, Trailing: View>: View {
+    let title: String?
+    var footer: String?
+    @ViewBuilder let trailing: Trailing
+    @ViewBuilder let content: Content
+
+    init(
+        _ title: String? = nil, footer: String? = nil, @ViewBuilder trailing: () -> Trailing = { EmptyView() },
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.footer = footer
+        self.trailing = trailing()
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let title {
+                HStack {
+                    Text(title).font(.headline).foregroundStyle(Theme.text).accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    trailing
+                }
+                .padding(.horizontal, 6)
+            }
+            VStack(alignment: .leading, spacing: 0) { content }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassPanel(cornerRadius: 20)
+            if let footer {
+                Text(footer).font(.callout).foregroundStyle(Theme.tertiary).padding(.horizontal, 6)
+            }
+        }
+    }
+}
+
+/// One row in a glass section: a label with an optional hint, and its control on the right.
+struct GlassRow<Control: View>: View {
+    let title: String
+    var hint: String?
+    @ViewBuilder let control: Control
+
+    init(_ title: String, hint: String? = nil, @ViewBuilder control: () -> Control) {
+        self.title = title
+        self.hint = hint
+        self.control = control()
+    }
+
+    var body: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).foregroundStyle(Theme.text)
+                if let hint {
+                    Text(hint).font(.callout).foregroundStyle(Theme.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 12)
+            control
+        }
+        .padding(.vertical, 12)
+    }
+}
+
+extension View {
+    /// A menu picker sized to its value, for the right side of a glass row.
+    func rowPicker() -> some View {
+        labelsHidden().pickerStyle(.menu).fixedSize()
+    }
+
+    /// A switch without its label, for the right side of a glass row.
+    func rowSwitch() -> some View {
+        toggleStyle(.switch).labelsHidden()
     }
 }
 
