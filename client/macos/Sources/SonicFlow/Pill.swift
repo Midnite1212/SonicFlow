@@ -6,12 +6,12 @@ import SwiftUI
 @Observable
 final class PillModel {
     enum Phase {
-        case listening, processing
+        case idle, listening, processing
     }
 
     static let barCount = 28
 
-    var phase: Phase = .listening
+    var phase: Phase = .idle
     var command = false
     var levels = [Float](repeating: 0, count: barCount)
     var startedAt = Date()
@@ -70,6 +70,8 @@ final class PillController {
     }
 
     func hide() {
+        // An ordered-out panel keeps running its timelines, so stop them.
+        model.phase = .idle
         panel.orderOut(nil)
     }
 }
@@ -100,7 +102,7 @@ struct PillView: View {
                             .frame(width: 34, alignment: .trailing)
                     }
                 }
-            } else {
+            } else if model.phase == .listening {
                 HStack(spacing: 2) {
                     ForEach(Array(model.levels.enumerated()), id: \.offset) { _, level in
                         Capsule()
