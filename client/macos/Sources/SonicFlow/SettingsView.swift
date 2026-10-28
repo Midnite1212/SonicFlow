@@ -14,6 +14,8 @@ final class SettingsModel {
     var switching = false
     var launchAtLogin = SMAppService.mainApp.status == .enabled
     var loginMessage: String?
+    var confirmingClear = false
+    var typingTest: TypingTestModel?
 
     func refresh() async {
         devices = AudioDevices.inputs()
@@ -69,72 +71,116 @@ final class SettingsModel {
 }
 
 struct SettingsView: View {
+    let controller: DictationController
     @Bindable var settings: AppSettings
-    let model: SettingsModel
+    @Bindable var model: SettingsModel
     let navigation: Navigation
 
     var body: some View {
         Group {
-            Panel("Dictation") {
-                SettingRow("Hotkey") {
+            GlassSection("Dictation") {
+                GlassRow("Hotkey") {
                     Picker("Hotkey", selection: $settings.hotkey) {
                         ForEach(Hotkey.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
-                    .quietPicker()
+                    .rowPicker()
                 }
                 Seam()
-                SettingRow("Mode", hint: modeHint) {
+                GlassRow("Mode", hint: modeHint) {
                     Picker("Mode", selection: $settings.talkMode) {
                         ForEach(TalkMode.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
-                    .quietPicker()
+                    .rowPicker()
                 }
             }
-            Panel("Microphone") {
-                SettingRow("Input") {
+            GlassSection("Microphone") {
+                GlassRow("Input") {
                     Picker("Input", selection: $settings.inputDeviceUID) {
                         Text("System default").tag(String?.none)
                         ForEach(model.devices) { Text($0.name).tag(Optional($0.uid)) }
                     }
-                    .quietPicker()
+                    .rowPicker()
                 }
                 Seam()
-                SettingRow(
+                GlassRow(
                     "Keep microphone ready",
                     hint: "Keeps the moment before you press the hotkey and skips the mic's start-up delay "
                         + "(up to 0.2 s on some USB mics). macOS shows the mic indicator the whole time; "
                         + "audio outside a dictation is never sent."
                 ) {
-                    Toggle("Keep microphone ready", isOn: $settings.keepMicrophoneReady)
-                        .toggleStyle(.switch).labelsHidden()
+                    Toggle("Keep microphone ready", isOn: $settings.keepMicrophoneReady).rowSwitch()
                 }
             }
-            Panel("Engine") {
-                SettingRow("Models", hint: "Choose, download and add speech and cleanup models in Models.") {
+            GlassSection("History") {
+                GlassRow(
+                    "Save history on this Mac",
+                    hint: settings.saveHistory
+                        ? "Saved in Application Support, readable only by you."
+                        : "Kept in memory until SonicFlow quits. Nothing is written to disk."
+                ) {
+                    Toggle("Save history on this Mac", isOn: $settings.saveHistory).rowSwitch()
+                }
+                Seam()
+                GlassRow("Keep for") {
+                    Picker("Keep for", selection: $settings.historyRetention) {
+                        ForEach(HistoryRetention.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .rowPicker()
+                    .disabled(!settings.saveHistory)
+                }
+                Seam()
+                GlassRow("Dictation history") {
+                    Button("Clear History…") { model.confirmingClear = true }
+                        .disabled(controller.history.entries.isEmpty)
+                }
+            }
+            GlassSection("Typing speed") {
+                GlassRow(
+                    settings.typingWordsPerMinute.map { "\(Int($0.rounded())) wpm" } ?? "Not measured",
+                    hint: settings.typingWordsPerMinute == nil
+                        ? "Time saved assumes an average typist at \(Int(TypingTest.averageWordsPerMinute)) wpm until you take the one-minute test."
+                        : "Time saved compares dictating with typing at your own speed."
+                ) {
+                    Button(settings.typingWordsPerMinute == nil ? "Take Typing Test…" : "Retake Test…") {
+                        model.typingTest = TypingTestModel()
+                    }
+                }
+            }
+            GlassSection("Engine") {
+                GlassRow("Models", hint: "Choose, download and add speech and cleanup models.") {
                     Button("Open Models") { navigation.pane = .models }
                 }
                 Seam()
-                HStack {
-                    if let engineMessage = model.engineMessage {
-                        Text(engineMessage).font(.callout).foregroundStyle(Theme.tertiary)
-                    }
-                    Spacer()
-                    Button("Restart Engine") { model.restartEngine() }
+                GlassRow("Speech engine", hint: model.engineMessage) {
+                    Button("Restart") { model.restartEngine() }
                 }
             }
-            Panel("General") {
-                SettingRow("Launch SonicFlow at login", hint: model.loginMessage) {
+            GlassSection("General") {
+                GlassRow("Launch SonicFlow at login", hint: model.loginMessage) {
                     Toggle(
                         "Launch SonicFlow at login",
                         isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) })
                     )
-                    .toggleStyle(.switch).labelsHidden()
+                    .rowSwitch()
                 }
             }
         }
-        .panelColumn()
+        .glassColumn()
         .navigationTitle("Settings")
         .task { await model.refresh() }
+        .sheet(item: $model.typingTest) { test in
+            TypingTestView(model: test) { speed in
+                settings.typingWordsPerMinute = speed
+                model.typingTest = nil
+            } cancel: {
+                model.typingTest = nil
+            }
+        }
+        .confirmationDialog("Clear all dictation history?", isPresented: $model.confirmingClear) {
+            Button("Clear History", role: .destructive) { controller.clearHistory() }
+        } message: {
+            Text(settings.saveHistory ? "This also deletes the saved copy on this Mac." : "This can't be undone.")
+        }
     }
 
     private var modeHint: String {

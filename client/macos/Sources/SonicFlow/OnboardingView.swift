@@ -34,11 +34,12 @@ struct OnboardingView: View {
                 .frame(maxWidth: 520)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(32)
-            Divider().overlay(Theme.seam)
+            Seam()
             footer.padding(16)
         }
         .foregroundStyle(Theme.text)
-        .background(Theme.ground)
+        .background(AmbientLight())
+        .navigationTitle("SonicFlow")
     }
 
     @ViewBuilder private var content: some View {
@@ -172,7 +173,7 @@ struct OnboardingView: View {
             .overlay(RoundedRectangle(cornerRadius: 7).stroke(Theme.seam))
             HStack(spacing: 12) {
                 Text("Release to text").foregroundStyle(Theme.secondary)
-                SpeedStripe(ms: latest?.latencyMs, height: 6, showsBudget: true)
+                SpeedStripe(ms: latest?.latencyMs, height: 6, showsInstant: true)
                 Text(latest.map { Format.ms($0.latencyMs) } ?? "—")
                     .monospacedDigit()
                     .foregroundStyle(latest.map { Theme.Speed(ms: $0.latencyMs).text } ?? Theme.tertiary)

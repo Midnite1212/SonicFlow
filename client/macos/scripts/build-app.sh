@@ -17,7 +17,10 @@ bin_dir="$(swift build --package-path "$root" -c release --show-bin-path)"
 
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-cp "$bin_dir/SonicFlow" "$app/Contents/MacOS/SonicFlow"
+# SwiftPM stamps the deployment target as the SDK version, which makes macOS 26 draw the app in its
+# compatibility look; stamp the real SDK so the window gets the current sidebar and toolbar.
+vtool -set-build-version macos 14.0 "$(xcrun --show-sdk-version)" -replace \
+  -output "$app/Contents/MacOS/SonicFlow" "$bin_dir/SonicFlow"
 cp "$root/Resources/Info.plist" "$app/Contents/Info.plist"
 
 iconset="$root/build/AppIcon.iconset"

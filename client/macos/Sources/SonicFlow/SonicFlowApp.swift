@@ -36,6 +36,12 @@ struct SonicFlowApp: App {
                 Button("Settings…") { appDelegate.mainWindow.show(.settings) }
                     .keyboardShortcut(",")
             }
+            CommandGroup(after: .sidebar) {
+                ForEach(Array(Pane.allCases.enumerated()), id: \.element) { index, pane in
+                    Button(pane.title) { appDelegate.mainWindow.show(pane) }
+                        .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")))
+                }
+            }
         }
     }
 }
@@ -58,8 +64,8 @@ struct MenuContent: View {
                     Button(History.preview(entry.text)) { controller.copyFromHistory(entry) }
                 }
                 Divider()
-                Text("Click to copy · kept in memory only")
-                Button("Clear") { controller.clearHistory() }
+                Text("Click to copy")
+                Button("Clear History…") { confirmClear() }
             }
         }
         let permissions = controller.permissions
@@ -83,5 +89,16 @@ struct MenuContent: View {
             .keyboardShortcut(",")
         Button("Quit SonicFlow") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
+    }
+
+    private func confirmClear() {
+        let alert = NSAlert()
+        alert.messageText = "Clear all dictation history?"
+        alert.informativeText = controller.settings.saveHistory
+            ? "This also deletes the saved copy on this Mac." : "This can't be undone."
+        alert.addButton(withTitle: "Clear History").hasDestructiveAction = true
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate()
+        if alert.runModal() == .alertFirstButtonReturn { controller.clearHistory() }
     }
 }

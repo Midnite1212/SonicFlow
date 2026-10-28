@@ -40,6 +40,7 @@ final class Navigation {
     let history = HistoryViewModel()
     let onboarding = OnboardingModel()
     let models = ModelsModel()
+    let vocabulary = VocabularyModel()
 }
 
 /// Owns the app window. SonicFlow is a menu-bar accessory, so it joins the Dock and the app
@@ -73,8 +74,10 @@ final class MainWindow: NSObject, NSWindowDelegate {
         let hosting = NSHostingController(rootView: root)
         // By default the window resizes to the content's ideal size, which a List makes enormous.
         hosting.sizingOptions = []
+        hosting.sceneBridgingOptions = [.title, .toolbars]
         let window = NSWindow(contentViewController: hosting)
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        window.toolbarStyle = .unified
         window.title = (navigation.pane ?? .home).title
         // The window is the night-session world in either system appearance.
         window.appearance = NSAppearance(named: .darkAqua)
@@ -98,20 +101,19 @@ struct RootView: View {
 
     var body: some View {
         // Affirmative green, so switches and default buttons never borrow a speed colour.
-        content.tint(Theme.ready)
+        content.tint(Theme.ready).background(AmbientLight())
     }
 
     @ViewBuilder private var content: some View {
         if controller.settings.onboarded {
             NavigationSplitView {
-                List(Pane.allCases, selection: $navigation.pane) { pane in
-                    Label(pane.title, systemImage: pane.symbol)
-                        .badge(count(pane))
-                        .tag(pane)
+                List {
+                    Section { rows(.home, .history) }
+                    Section("Personalize") { rows(.dictionary, .snippets, .styles) }
+                    Section("Setup") { rows(.models, .settings) }
                 }
-                .scrollContentBackground(.hidden)
-                .background(Theme.board)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 200, max: 240)
+                .listStyle(.sidebar)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 210, max: 240)
             } detail: {
                 switch navigation.pane ?? .home {
                 case .home:
@@ -119,11 +121,15 @@ struct RootView: View {
                 case .history: HistoryView(
                         controller: controller, settings: controller.settings, model: navigation.history
                     )
-                case .dictionary: DictionaryView(store: controller.personalization)
-                case .snippets: SnippetsView(store: controller.personalization)
+                case .dictionary: DictionaryView(store: controller.personalization, model: navigation.vocabulary)
+                case .snippets: SnippetsView(store: controller.personalization, model: navigation.vocabulary)
                 case .styles: StylesView(store: controller.personalization)
                 case .models: ModelsView(model: navigation.models)
-                case .settings: SettingsView(settings: controller.settings, model: settingsModel, navigation: navigation)
+                case .settings:
+                    SettingsView(
+                        controller: controller, settings: controller.settings, model: settingsModel,
+                        navigation: navigation
+                    )
                 }
             }
         } else {
@@ -134,6 +140,23 @@ struct RootView: View {
         }
     }
 
+    /// Rows draw their own selection: the native one is the system accent blue, which SwiftUI's tint
+    /// can't reach without an asset catalog.
+    private func rows(_ panes: Pane...) -> some View {
+        ForEach(panes) { pane in
+            Button { navigation.pane = pane } label: {
+                Label(pane.title, systemImage: pane.symbol)
+                    .foregroundStyle(Theme.text)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .badge(count(pane))
+            .listRowBackground(SidebarSelection(isSelected: (navigation.pane ?? .home) == pane))
+            .accessibilityAddTraits((navigation.pane ?? .home) == pane ? .isSelected : [])
+        }
+    }
+
     private func count(_ pane: Pane) -> Int {
         switch pane {
         case .history: controller.history.entries.count
@@ -141,5 +164,15 @@ struct RootView: View {
         case .snippets: controller.personalization.snippets.count
         default: 0
         }
+    }
+}
+
+private struct SidebarSelection: View {
+    let isSelected: Bool
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(Color.white.opacity(isSelected ? 0.11 : 0))
+            .padding(.horizontal, 10)
     }
 }

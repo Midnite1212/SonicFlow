@@ -20,7 +20,7 @@ public struct UsageStats: Codable, Equatable, Sendable {
         }
 
         /// Typing the same words at `typingWordsPerMinute`, minus the time spent speaking.
-        public func timeSavedSeconds(typingWordsPerMinute: Double = 40) -> Double {
+        public func timeSavedSeconds(typingWordsPerMinute: Double = TypingTest.averageWordsPerMinute) -> Double {
             max(0, Double(words) / typingWordsPerMinute * 60 - speakingSeconds)
         }
 

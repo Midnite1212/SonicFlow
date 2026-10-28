@@ -1,32 +1,32 @@
 import AppKit
 import SwiftUI
 
-/// The night-session palette: velodrome navy with the logo's cyan, blue and violet as a speed
-/// scale. Flat colour only; depth comes from a step of lightness and a hairline seam.
+/// The night-session palette: a deep, quiet navy with the system cyan, blue and purple (the logo's
+/// hues, calibrated) as a speed scale. Content is flat; glass belongs to the chrome and the pill.
 enum Theme {
-    static let ground = Color(hex: 0x0F1A33)
-    static let board = Color(hex: 0x132042)
-    static let panel = Color(hex: 0x18264A)
-    static let seam = Color(hex: 0x26365F)
-    static let text = Color(hex: 0xE8ECF5)
-    static let secondary = Color(hex: 0xAEB8D0)
-    static let tertiary = Color(hex: 0x8392B5)
+    static let ground = Color(hex: 0x0D111C)
+    static let panel = Color(hex: 0x161D2D)
+    static let seam = Color(hex: 0x262E42)
+    static let text = Color(hex: 0xE8EBF2)
+    static let secondary = Color(hex: 0xA4ACBF)
+    static let tertiary = Color(hex: 0x8089A0)
 
-    static let cyan = Color(hex: 0x2FD3F0)
-    static let blue = Color(hex: 0x3D6BFF)
-    static let violet = Color(hex: 0x8B5CF6)
+    static let cyan = Color(hex: 0x64D2FF)
+    static let blue = Color(hex: 0x0A84FF)
+    static let violet = Color(hex: 0xBF5AF2)
     /// Lighter steps of blue and violet for text on navy, where the stripe colours are too dark.
-    static let blueText = Color(hex: 0x7F9CFF)
-    static let violetText = Color(hex: 0xB59BFA)
+    static let blueText = Color(hex: 0x5EADFF)
+    static let violetText = Color(hex: 0xDA8FFF)
 
     static let ready = Color(hex: 0x4CC38A)
     static let alert = Color(hex: 0xF2706A)
 
-    static let groundNS = NSColor(red: 0x0F / 255, green: 0x1A / 255, blue: 0x33 / 255, alpha: 1)
+    static let groundNS = NSColor(red: 0x0D / 255, green: 0x11 / 255, blue: 0x1C / 255, alpha: 1)
 
     /// Every stripe shares this scale so any two latencies compare by length.
     static let scaleMs: Double = 600
-    static let budgetMs: Double = 500
+    /// Under about 100 ms a response feels instantaneous (Card, Moran & Newell; Nielsen's 0.1 s limit).
+    static let instantMs: Double = 100
 
     enum Speed {
         case fast, normal, slow
@@ -67,7 +67,7 @@ extension Color {
 struct SpeedStripe: View {
     let ms: Double?
     var height: CGFloat = 6
-    var showsBudget = false
+    var showsInstant = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -88,11 +88,11 @@ struct SpeedStripe: View {
                     }
                     .offset(x: width - 16)
                 }
-                if showsBudget {
+                if showsInstant {
                     Rectangle()
                         .fill(Theme.tertiary)
                         .frame(width: 1, height: height + 8)
-                        .offset(x: width * Theme.budgetMs / Theme.scaleMs)
+                        .offset(x: width * Theme.instantMs / Theme.scaleMs)
                 }
             }
             .frame(maxHeight: .infinity)
@@ -102,46 +102,39 @@ struct SpeedStripe: View {
     }
 }
 
-/// A console panel: one step lighter than the ground, a hairline seam, a small title.
-struct Panel<Content: View>: View {
-    let title: String
-    var trailing: AnyView?
-    @ViewBuilder let content: Content
-
-    init(_ title: String, trailing: AnyView? = nil, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.trailing = trailing
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.secondary)
-                Spacer()
-                trailing
-            }
-            content
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.seam, lineWidth: 1))
-    }
-}
-
 extension View {
-    /// The navy ground behind a pane, with system list and form backgrounds removed.
+    /// Lets the window's ambient light show through, with system list and form backgrounds removed.
     func paneBackground() -> some View {
         scrollContentBackground(.hidden)
-            .background(Theme.ground)
     }
 
-    /// Pane content as a centred column of panels on the navy ground.
-    func panelColumn() -> some View {
+    /// A Liquid Glass panel for the few groups that float on Home; Panel navy before macOS 26.
+    @ViewBuilder func glassPanel(cornerRadius: CGFloat = 22) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if #available(macOS 26, *) {
+            glassEffect(.regular, in: shape)
+        } else {
+            background(Theme.panel, in: shape)
+        }
+    }
+
+    /// Apple's glass button where the system has it, a bordered button before.
+    @ViewBuilder func glassButton() -> some View {
+        if #available(macOS 26, *) {
+            // Clear tint: the green control tint would otherwise colour every glass button.
+            buttonStyle(.glass(.regular)).tint(.clear)
+        } else {
+            buttonStyle(.bordered)
+        }
+    }
+
+    /// A pane of glass sections: a centred scrolling column over the ambient light.
+    func glassColumn() -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) { self }
-                .padding(24)
+            VStack(alignment: .leading, spacing: 28) { self }
+                .glassButton()
+                .padding(.horizontal, 32)
+                .padding(.vertical, 24)
                 .frame(maxWidth: 760, alignment: .topLeading)
                 .frame(maxWidth: .infinity)
         }
@@ -149,42 +142,116 @@ extension View {
     }
 }
 
-/// One setting inside a panel: label on the left, its control on the right, an optional hint.
-struct SettingRow<Control: View>: View {
-    let label: String
-    var hint: String?
-    @ViewBuilder let control: Control
+/// A titled group of rows on a glass panel, matching Home's engine panel. Rows separate with `Seam()`.
+struct GlassSection<Content: View, Trailing: View>: View {
+    let title: String?
+    var footer: String?
+    @ViewBuilder let trailing: Trailing
+    @ViewBuilder let content: Content
 
-    init(_ label: String, hint: String? = nil, @ViewBuilder control: () -> Control) {
-        self.label = label
-        self.hint = hint
-        self.control = control()
+    init(
+        _ title: String? = nil, footer: String? = nil, @ViewBuilder trailing: () -> Trailing = { EmptyView() },
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.footer = footer
+        self.trailing = trailing()
+        self.content = content()
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(label).foregroundStyle(Theme.text)
-                Spacer()
-                control
+        VStack(alignment: .leading, spacing: 10) {
+            if let title {
+                HStack {
+                    Text(title).font(.headline).foregroundStyle(Theme.text).accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    trailing
+                }
+                .padding(.horizontal, 6)
             }
-            if let hint {
-                Text(hint).font(.callout).foregroundStyle(Theme.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 0) { content }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassPanel(cornerRadius: 20)
+            if let footer {
+                Text(footer).font(.callout).foregroundStyle(Theme.tertiary).padding(.horizontal, 6)
             }
         }
     }
 }
 
-extension View {
-    /// A picker shown as its value and a chevron, without the bordered popup and its accent cap.
-    func quietPicker() -> some View {
-        labelsHidden().pickerStyle(.menu).buttonStyle(.borderless).tint(Theme.secondary).fixedSize()
+/// One row in a glass section: a label with an optional hint, and its control on the right.
+struct GlassRow<Control: View>: View {
+    let title: String
+    var hint: String?
+    @ViewBuilder let control: Control
+
+    init(_ title: String, hint: String? = nil, @ViewBuilder control: () -> Control) {
+        self.title = title
+        self.hint = hint
+        self.control = control()
+    }
+
+    var body: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).foregroundStyle(Theme.text)
+                if let hint {
+                    Text(hint).font(.callout).foregroundStyle(Theme.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 12)
+            control
+        }
+        .padding(.vertical, 12)
     }
 }
 
+extension View {
+    /// A menu picker sized to its value, for the right side of a glass row.
+    func rowPicker() -> some View {
+        labelsHidden().pickerStyle(.menu).fixedSize()
+    }
+
+    /// A switch without its label, for the right side of a glass row.
+    func rowSwitch() -> some View {
+        toggleStyle(.switch).labelsHidden()
+    }
+}
+
+/// A faint wash of the speed hues behind the whole window, so the glass sidebar and toolbar have light
+/// to bend. Without it they sit on flat navy and read as plain panels.
+struct AmbientLight: View {
+    var body: some View {
+        GeometryReader { geometry in
+            let size = geometry.size
+            ZStack {
+                Theme.ground
+                ZStack {
+                    Circle().fill(Theme.cyan.opacity(0.34))
+                        .frame(width: size.width * 0.42).position(x: size.width * 0.06, y: size.height * 0.18)
+                    Circle().fill(Theme.blue.opacity(0.26))
+                        .frame(width: size.width * 0.5).position(x: size.width * 0.45, y: -size.height * 0.02)
+                    Circle().fill(Theme.violet.opacity(0.26))
+                        .frame(width: size.width * 0.34).position(x: size.width * 0.88, y: size.height * 0.3)
+                    Circle().fill(Theme.violet.opacity(0.16))
+                        .frame(width: size.width * 0.5).position(x: size.width * 0.7, y: size.height * 1.05)
+                }
+                .blur(radius: 90)
+            }
+            .drawingGroup()
+        }
+        .ignoresSafeArea()
+    }
+}
+
+/// A one-device-pixel rule, so seams stay crisp at any display scale.
 struct Seam: View {
-    var body: some View { Rectangle().fill(Theme.seam).frame(height: 1) }
+    @Environment(\.displayScale) private var scale
+
+    var body: some View { Rectangle().fill(Theme.seam).frame(height: 1 / scale) }
 }
 
 enum Format {

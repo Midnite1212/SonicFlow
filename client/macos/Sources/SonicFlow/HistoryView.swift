@@ -7,7 +7,8 @@ import SwiftUI
 @Observable
 final class HistoryViewModel {
     var query = ""
-    var confirmingClear = false
+    var selection = Set<History.Entry.ID>()
+    var hovered: History.Entry.ID?
 }
 
 struct HistoryView: View {
@@ -16,60 +17,10 @@ struct HistoryView: View {
     @Bindable var model: HistoryViewModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            controls
-            Divider().overlay(Theme.seam)
-            list
-        }
-        .paneBackground()
-        .navigationTitle("History")
-        .confirmationDialog(
-            "Clear all dictation history?", isPresented: $model.confirmingClear
-        ) {
-            Button("Clear History", role: .destructive) { controller.clearHistory() }
-        } message: {
-            Text(settings.saveHistory ? "This also deletes the saved copy on this Mac." : "")
-        }
-    }
-
-    private var controls: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 16) {
-                Toggle("Save history on this Mac", isOn: $settings.saveHistory)
-                    .fixedSize()
-                Picker("Keep for", selection: $settings.historyRetention) {
-                    ForEach(HistoryRetention.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .fixedSize()
-                .disabled(!settings.saveHistory)
-                Spacer()
-                Button("Clear All…") { model.confirmingClear = true }
-                    .disabled(controller.history.entries.isEmpty)
-                    .fixedSize()
-            }
-            HStack(spacing: 16) {
-                Text(
-                    settings.saveHistory
-                        ? "Saved in Application Support, readable only by you, deleted after \(settings.historyRetention.title.lowercased())."
-                        : "Kept in memory until SonicFlow quits. Nothing is written to disk."
-                )
-                .font(.callout)
-                .foregroundStyle(Theme.tertiary)
-                Spacer(minLength: 0)
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(Theme.tertiary)
-                    TextField("Search history", text: $model.query)
-                        .textFieldStyle(.plain)
-                }
-                .padding(.horizontal, 10)
-                .frame(minWidth: 140, maxWidth: 220, minHeight: 28, maxHeight: 28)
-                .background(Theme.panel, in: RoundedRectangle(cornerRadius: 7))
-                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Theme.seam))
-            }
-        }
-        .foregroundStyle(Theme.text)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 16)
+        list
+            .paneBackground()
+            .navigationTitle("History")
+            .searchable(text: $model.query, placement: .toolbar, prompt: "Search History")
     }
 
     @ViewBuilder private var list: some View {
@@ -86,23 +37,41 @@ struct HistoryView: View {
             .foregroundStyle(Theme.secondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            List {
+            List(selection: $model.selection) {
+                // Day headers are plain rows: sticky section headers draw a grey material bar.
                 ForEach(Self.byDay(entries), id: \.day) { group in
                     Text(group.day.formatted(date: .complete, time: .omitted))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.secondary)
-                        .padding(.top, 10)
-                        .listRowBackground(Theme.ground)
+                        .padding(.top, 14)
+                        .accessibilityAddTraits(.isHeader)
+                        .selectionDisabled()
                         .listRowSeparator(.hidden)
                     ForEach(group.entries) { entry in
-                        HistoryRow(entry: entry, controller: controller)
-                            .listRowBackground(Theme.ground)
+                        HistoryRow(entry: entry, controller: controller, model: model)
+                            .tag(entry.id)
                             .listRowSeparatorTint(Theme.seam)
                     }
                 }
             }
+            .listStyle(.inset)
+            .alternatingRowBackgrounds(.disabled)
             .scrollContentBackground(.hidden)
+            .padding(.vertical, 6)
+            .glassPanel(cornerRadius: 20)
+            .padding(.horizontal, 24)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+            .onCopyCommand { [NSItemProvider(object: selectedText(in: entries) as NSString)] }
+            .onDeleteCommand {
+                for entry in entries where model.selection.contains(entry.id) { controller.deleteFromHistory(entry) }
+                model.selection.removeAll()
+            }
         }
+    }
+
+    private func selectedText(in entries: [History.Entry]) -> String {
+        entries.filter { model.selection.contains($0.id) }.map(\.text).joined(separator: "\n\n")
     }
 
     static func byDay(_ entries: [History.Entry]) -> [(day: Date, entries: [History.Entry])] {
@@ -115,32 +84,43 @@ struct HistoryView: View {
 struct HistoryRow: View {
     let entry: History.Entry
     let controller: DictationController
+    let model: HistoryViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(entry.text)
-                .foregroundStyle(Theme.text)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: 12) {
-                Text(entry.date, style: .time).monospacedDigit()
-                if let app = entry.appName { Text(app) }
-                Text("^[\(entry.wordCount) word](inflect: true)")
-                if entry.isEdit { Text("Edit").fontWeight(.semibold).foregroundStyle(Theme.secondary) }
-                SpeedStripe(ms: entry.latencyMs, height: 4).frame(width: 160)
-                Text(Format.ms(entry.latencyMs))
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.Speed(ms: entry.latencyMs).text)
-                Spacer()
-                Button("Copy") { controller.copyFromHistory(entry) }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(Theme.secondary)
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(entry.text)
+                    .foregroundStyle(Theme.text)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 12) {
+                    Text(entry.date, style: .time).monospacedDigit()
+                    if let app = entry.appName { Text(app) }
+                    Text("^[\(entry.wordCount) word](inflect: true)")
+                    if entry.isEdit { Text("Edit").fontWeight(.semibold).foregroundStyle(Theme.secondary) }
+                    SpeedStripe(ms: entry.latencyMs, height: 4).frame(width: 160)
+                    Text(Format.ms(entry.latencyMs))
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.Speed(ms: entry.latencyMs).text)
+                }
+                .font(.callout)
+                .foregroundStyle(Theme.tertiary)
             }
-            .font(.callout)
-            .foregroundStyle(Theme.tertiary)
+            Button("Copy", systemImage: "doc.on.doc") { controller.copyFromHistory(entry) }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.borderless)
+                .foregroundStyle(Theme.secondary)
+                .help("Copy")
+                .opacity(model.hovered == entry.id ? 1 : 0)
         }
         .padding(.vertical, 6)
-        .padding(.horizontal, 8)
+        .contentShape(Rectangle())
+        .onHover { inside in
+            if inside {
+                model.hovered = entry.id
+            } else if model.hovered == entry.id {
+                model.hovered = nil
+            }
+        }
         .contextMenu {
             Button("Copy") { controller.copyFromHistory(entry) }
             Button("Delete", role: .destructive) { controller.deleteFromHistory(entry) }

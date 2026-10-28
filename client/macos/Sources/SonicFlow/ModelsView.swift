@@ -134,33 +134,28 @@ struct ModelsView: View {
     @Bindable var model: ModelsModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 16) {
+        Group {
+            if let message = model.message {
+                Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Theme.alert)
+            }
+            switch model.tab {
+            case .recommended: recommended
+            case .browse: browse
+            case .mine: mine
+            }
+        }
+        .glassColumn()
+        .navigationTitle("Models")
+        .toolbar {
+            ToolbarItem(placement: .principal) {
                 Picker("Section", selection: $model.tab) {
                     ForEach(ModelsModel.Tab.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .fixedSize()
-                if let message = model.message {
-                    Text(message).font(.callout).foregroundStyle(Theme.alert).lineLimit(2)
-                }
-                Spacer()
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 14)
-            Seam()
-            Group {
-                switch model.tab {
-                case .recommended: recommended
-                case .browse: browse
-                case .mine: mine
-                }
-            }
-            .panelColumn()
         }
-        .paneBackground()
-        .navigationTitle("Models")
         .task {
             await model.refresh()
             await model.loadOllama()
@@ -169,20 +164,31 @@ struct ModelsView: View {
 
     @ViewBuilder private var recommended: some View {
         if let list = model.list {
-            ModelSection(title: "Speech recognition", models: list.models(in: .recommended, kind: .asr), store: model)
-            ModelSection(title: "Cleanup", models: list.models(in: .recommended, kind: .cleanup), store: model)
-            Text("Release-to-text time and word error rate on the 21-clip test set, measured on an M3 Pro unless marked this Mac. Cleanup times include the speech model. Benchmark any installed model from its ⋯ menu.")
-                .font(.callout)
-                .foregroundStyle(Theme.tertiary)
+            GlassSection("Speech recognition") {
+                ModelRows(models: list.models(in: .recommended, kind: .asr), store: model, showsKind: false)
+            }
+            GlassSection(
+                "Cleanup",
+                footer: "Release-to-text time and word error rate on the 21-clip test set, measured on an M3 Pro unless marked this Mac. Cleanup times include the speech model. Benchmark any installed model from its ⋯ menu."
+            ) {
+                ModelRows(models: list.models(in: .recommended, kind: .cleanup), store: model, showsKind: false)
+            }
         }
     }
 
     @ViewBuilder private var browse: some View {
         if let list = model.list {
-            ModelSection(title: "Speech recognition", models: list.models(in: .catalog, kind: .asr), store: model)
-            ModelSection(title: "Cleanup", models: list.models(in: .catalog, kind: .cleanup), store: model)
+            GlassSection("Speech recognition") {
+                ModelRows(models: list.models(in: .catalog, kind: .asr), store: model, showsKind: false)
+            }
+            GlassSection("Cleanup") {
+                ModelRows(models: list.models(in: .catalog, kind: .cleanup), store: model, showsKind: false)
+            }
         }
-        Panel("Search Hugging Face") {
+        GlassSection(
+            "Search Hugging Face",
+            footer: "Searching contacts Hugging Face. Only MLX builds are listed; they run on this Mac once downloaded."
+        ) {
             HStack(spacing: 10) {
                 TextField("Search MLX models, e.g. whisper or llama", text: $model.query)
                     .textFieldStyle(.roundedBorder)
@@ -191,30 +197,27 @@ struct ModelsView: View {
                     Text("Cleanup").tag(ModelInfo.Kind.cleanup)
                     Text("Speech").tag(ModelInfo.Kind.asr)
                 }
-                .quietPicker()
+                .rowPicker()
                 Button("Search") { Task { await model.search() } }
                     .disabled(model.query.trimmingCharacters(in: .whitespaces).isEmpty || model.searching)
             }
-            Text("Searching contacts Hugging Face. Only MLX builds are listed; they run on this Mac once downloaded.")
-                .font(.callout).foregroundStyle(Theme.tertiary)
+            .padding(.vertical, 12)
             if model.searching {
-                ProgressView().controlSize(.small)
+                ProgressView().controlSize(.small).padding(.bottom, 12)
             } else if model.searched && model.results.isEmpty {
-                Text("No MLX models matched.").foregroundStyle(Theme.secondary)
+                Text("No MLX models matched.").foregroundStyle(Theme.secondary).padding(.bottom, 12)
             }
             ForEach(model.results) { result in
                 Seam()
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(result.source).foregroundStyle(Theme.text)
-                        Text("\(result.family == "mlx-lm" ? "MLX" : result.family.capitalized) · \((result.downloads ?? 0).formatted()) downloads")
-                            .font(.callout).foregroundStyle(Theme.tertiary)
-                    }
-                    Spacer()
+                GlassRow(
+                    result.source,
+                    hint: "\(result.family == "mlx-lm" ? "MLX" : result.family.capitalized) · \((result.downloads ?? 0).formatted()) downloads"
+                ) {
                     if result.added {
                         Text("Added").foregroundStyle(Theme.tertiary)
                     } else {
                         Button("Add and Download") { Task { await model.add(source: result.source) } }
+                            .controlSize(.small)
                     }
                 }
             }
@@ -222,16 +225,22 @@ struct ModelsView: View {
     }
 
     @ViewBuilder private var mine: some View {
-        Panel("Add a model") {
-            SettingRow("Model folder on this Mac", hint: "An MLX model you downloaded: a folder with config.json and .safetensors weights.") {
+        GlassSection("Add a model") {
+            GlassRow(
+                "Model folder on this Mac",
+                hint: "An MLX model you downloaded: a folder with config.json and .safetensors weights."
+            ) {
                 Button("Choose Folder…") { Task { await model.chooseFolder() } }
             }
             Seam()
-            SettingRow("Hugging Face repo", hint: "Any MLX build, e.g. mlx-community/whisper-small-mlx. Downloads after adding.") {
+            GlassRow(
+                "Hugging Face repo",
+                hint: "Any MLX build, e.g. mlx-community/whisper-small-mlx. Downloads after adding."
+            ) {
                 HStack {
                     TextField("org/model", text: $model.repo)
                         .textFieldStyle(.roundedBorder)
-                        .frame(width: 260)
+                        .frame(width: 220)
                         .onSubmit { Task { await addRepo() } }
                     Button("Add") { Task { await addRepo() } }
                         .disabled(!model.repo.contains("/"))
@@ -242,10 +251,11 @@ struct ModelsView: View {
         }
         if let list = model.list {
             let custom = list.models.filter { $0.group == .custom }
-            Panel("Your models") {
+            GlassSection("Your models") {
                 if custom.isEmpty {
                     Text("Models you add appear here, ready to use for speech or cleanup.")
                         .foregroundStyle(Theme.secondary)
+                        .padding(.vertical, 12)
                 } else {
                     ModelRows(models: custom, store: model, showsKind: true)
                 }
@@ -254,27 +264,29 @@ struct ModelsView: View {
     }
 
     @ViewBuilder private var ollamaRows: some View {
-        if let ollama = model.ollama, ollama.running {
-            SettingRow("Ollama", hint: ollama.models.isEmpty ? "Ollama is running but has no models. Pull one with `ollama pull`." : "Cleanup models you pulled in Ollama.") {
-                Button("Refresh") { Task { await model.loadOllama() } }
-            }
+        let ollama = model.ollama
+        let running = ollama?.running == true
+        GlassRow(
+            "Ollama",
+            hint: !running
+                ? "Ollama isn't running. Install it from ollama.com or open the app, then refresh."
+                : ollama?.models.isEmpty == true
+                    ? "Ollama is running but has no models. Pull one with `ollama pull`."
+                    : "Cleanup models you pulled in Ollama."
+        ) {
+            Button("Refresh") { Task { await model.loadOllama() } }
+        }
+        if let ollama, running {
             ForEach(ollama.models) { pulled in
-                HStack {
-                    Text(pulled.name).foregroundStyle(Theme.text)
-                    if let size = ModelInfo.size(pulled.size) { Text(size).foregroundStyle(Theme.tertiary) }
-                    Spacer()
+                Seam()
+                GlassRow(pulled.name, hint: ModelInfo.size(pulled.size)) {
                     if pulled.added {
                         Text("Added").foregroundStyle(Theme.tertiary)
                     } else {
                         Button("Add") { Task { await model.add(source: pulled.name, family: "ollama") } }
+                            .controlSize(.small)
                     }
                 }
-                .font(.callout)
-                .padding(.leading, 12)
-            }
-        } else {
-            SettingRow("Ollama", hint: "Ollama isn't running. Install it from ollama.com or open the app, then refresh.") {
-                Button("Refresh") { Task { await model.loadOllama() } }
             }
         }
     }
@@ -284,18 +296,6 @@ struct ModelsView: View {
         guard repo.contains("/") else { return }
         await model.add(source: repo)
         if model.message == nil { model.repo = "" }
-    }
-}
-
-private struct ModelSection: View {
-    let title: String
-    let models: [ModelInfo]
-    let store: ModelsModel
-
-    var body: some View {
-        Panel(title) {
-            ModelRows(models: models, store: store, showsKind: false)
-        }
     }
 }
 
@@ -342,11 +342,8 @@ private struct ModelRow: View {
                         SpeedStripe(ms: bench.p50Ms, height: 4).frame(width: 140)
                         Text(Format.ms(bench.p50Ms)).monospacedDigit()
                             .foregroundStyle(Theme.Speed(ms: bench.p50Ms).text)
-                        Text("\((bench.wer * 100).formatted(.number.precision(.fractionLength(1))))% word errors")
+                        Text("\((bench.wer * 100).formatted(.number.precision(.fractionLength(1))))% word errors\(bench.isLocal ? " · this Mac" : "")")
                             .foregroundStyle(Theme.tertiary)
-                        if bench.isLocal {
-                            Text("this Mac").foregroundStyle(Theme.tertiary)
-                        }
                     }
                     .font(.callout)
                 }
@@ -356,6 +353,7 @@ private struct ModelRow: View {
             }
             Spacer(minLength: 12)
             action(isActive: isActive)
+                .controlSize(.small)
             if model.installed || model.group == .custom {
                 Menu {
                     if model.installed {
@@ -380,7 +378,7 @@ private struct ModelRow: View {
                 .fixedSize()
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 12)
     }
 
     private var details: String {
