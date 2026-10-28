@@ -114,7 +114,7 @@ components:
 
 SonicFlow is the timing board at a velodrome after dark. The content is set straight on a deep, quiet navy: figures, stripes and hairline rules, with no boxes around them. Every latency is drawn as a livery stripe, and its length is its time on one fixed scale, so any two stripes anywhere in the app compare by length. Cyan, blue and purple, the logo's hues in Apple's calibrated system versions, appear only as that speed scale.
 
-Everything around the content is the Mac's own: the Liquid Glass sidebar and toolbar, grouped forms, tables, search and glass buttons. Glass is chrome, never content. A faint ambient light of the speed hues lies behind the whole window, because glass only shows by bending what is behind it; on flat navy it reads as a plain panel. The one glass surface SonicFlow draws itself is the pill, because it floats over other apps.
+Everything around the content is the Mac's own: the Liquid Glass sidebar and toolbar, grouped forms, tables, search and glass buttons. On Home, the engine status and Today's figures float on glass panels; the readings themselves (the latency board and Recent) stay on the ground. A faint ambient light of the speed hues lies behind the whole window, because glass only shows by bending what is behind it; on flat navy it reads as a plain panel. The one glass surface SonicFlow draws itself is the pill, because it floats over other apps.
 
 The window is opened now and then, so it is calm. It shows speed first, then whether the engine is ready, then what was said.
 
@@ -147,7 +147,7 @@ The thresholds come from `Theme.Speed(ms:)`: `ms < 200` is fast, `ms < 500` is n
 
 ### Neutral
 - **Midnight** (#0D111C): the base of the window behind every pane and onboarding, and the pill's glass tint. It also colours the stripe's break notch.
-- **Ambient light** (`AmbientLight`): three heavily blurred discs over Midnight — cyan at 22% top-left behind the sidebar, blue at 16% along the top, purple at 12% bottom-right. It is the one gradient in the product and exists only so the glass has light to bend.
+- **Ambient light** (`AmbientLight`): four discs blurred 90pt over Midnight — cyan at 34% behind the sidebar, blue at 26% along the top, purple at 26% behind the engine panel and at 16% bottom-right. It is the one gradient in the product and exists so the glass has light to bend.
 - **Panel** (#161D2D): the onboarding practice editor.
 - **Seam** (#262E42): every rule: the Home board's dividers, list separators and the empty stripe track.
 - **Off-White** (#E8EBF2): primary text, the command-mode wand, and the pill's level bars in command mode.
@@ -189,7 +189,7 @@ No eyebrow labels above headings: a figure's caption sits under it.
 The main window is a native `NavigationSplitView` with a unified toolbar (`sceneBridgingOptions = [.title, .toolbars]`, `toolbarStyle = .unified`) over full-size content with a transparent titlebar. It opens at 980×680 with a minimum of 820×560.
 
 - **Sidebar:** the system Liquid Glass sidebar, 200–240pt (ideal 210), in three sections: Home and History; Personalize (Dictionary, Snippets, Styles); Setup (Models, Settings). ⌘1–⌘7 select them from the View menu.
-- **Home** is a scrolling timing board, max 1100pt wide, with 32pt horizontal and 28pt vertical insets. The top row holds the latency readout beside the engine column (250pt), split by a vertical seam with 32pt either side. A Today band follows, ruled above and below, then Recent.
+- **Home** is a scrolling timing board, max 1100pt wide, with 32pt horizontal and 28pt vertical insets. The top row holds the latency readout beside the glass engine panel, 32pt apart. The glass Today band follows, then Recent.
 - **Settings, Styles and Models** are grouped `Form`s (`formStyle(.grouped)`), max 720pt, centred on the ground. Models' Recommended / Browse / My Models switch is a segmented control in the toolbar's principal slot.
 - **History** is a native inset `List`, searchable from the toolbar (⌘F), with selectable rows: ⌘C copies, Delete removes. Day headers are plain rows, because sticky section headers draw a grey material bar.
 - **Dictionary and Snippets** are editable `Table`s with the add button in the toolbar (⌘N), Delete on the selection with undo, and a one-paragraph footer above a seam.
@@ -202,7 +202,7 @@ The main window is a native `NavigationSplitView` with a unified toolbar (`scene
 Content is flat: no SwiftUI shadows or glows, and no gradient except the ambient light behind the window. Depth belongs to the system: the Liquid Glass sidebar and toolbar float over the content and the ambient light, and grouped forms draw their own rounded section fills.
 
 ### Named Rules
-**The Glass Is Chrome Rule.** Liquid Glass is for surfaces that float above content: the system sidebar and toolbar, and the pill over other apps. Never put glass behind content in a pane.
+**The Glass Floats Rule.** Liquid Glass is for surfaces that float: the system sidebar and toolbar, glass buttons, the pill over other apps, and on Home the engine panel and Today band (`glassPanel()`, 22pt continuous corners). The readings (latency board, Recent, History, forms) stay on the ground; glass never stacks on glass.
 
 **The Seam, Not Box Rule.** Separate groups of content with space and a one-device-pixel Seam (`Seam()`), never with an outlined box.
 
@@ -224,8 +224,8 @@ A latency drawn as a livery stripe. The same component appears on Home, every Re
 
 ### Home board
 - **Latency readout:** the Display figure, its caption and the typing comparison, the 12px stripe with the instant tick and scale labels, then Latest and "Slowest 5%" (the 7-day p95) as 4px stripe rows.
-- **Engine column:** an 8px status dot beside "Engine ready" or "Engine offline" (Section), then Callout key/value rows (key in Dim Slate, value in Off-White): Hotkey, Mode, Speech, Cleanup, Permissions. Missing permissions show an Alert Coral line and one small button each.
-- **Today band:** four equal figures (Figure over a Callout Dim Slate label) split by 1×40pt seams, 18pt vertical padding, seams above and below.
+- **Engine panel:** on glass, 250pt plus 22pt padding, stretched to the board's height. An 8px status dot beside "Engine ready" or "Engine offline" (Section), then Callout key/value rows (key in Dim Slate, value in Off-White): Hotkey, Mode, Speech, Cleanup, Permissions. Missing permissions show an Alert Coral line and one small button each.
+- **Today band:** a glass panel holding four equal figures (Figure over a Callout Dim Slate label) split by 1×40pt seams, 18pt vertical and 22pt horizontal padding.
 - **Recent:** a Section heading with a small glass "Show All" button, then up to eight rows split by seams.
 
 ### Typing test
@@ -243,7 +243,7 @@ Glass buttons (`.glass(.regular)` with a clear tint, so the green control tint d
 
 ### Navigation
 - **Sidebar:** SF Symbols labels (house, clock.arrow.circlepath, character.book.closed, text.insert, textformat, cpu, gearshape) with count badges for History, Dictionary and Snippets.
-- **Selection:** the system accent colour. SwiftUI's tint does not reach the native sidebar, and an AccentColor asset needs actool, which the Command Line Tools lack.
+- **Selection:** drawn by the rows themselves: white at 11% on a 10pt continuous rounded rectangle, inset 10pt. The native selection is the system accent blue, which SwiftUI's tint can't reach without an asset catalog (actool needs full Xcode). Rows are plain buttons, so ⌘1–⌘7 replace arrow-key navigation.
 
 ### Pill (floating)
 - **Body:** a 230×40 capsule of Liquid Glass tinted Midnight at 55% on macOS 26 (on earlier systems, Midnight at 96% with a Seam border), forced dark, 14px horizontal padding.
@@ -262,13 +262,14 @@ SwiftPM records the deployment target (macOS 14) as the SDK version, which makes
 - **Do** colour a time by `Theme.Speed(ms:)`: under 200 ms cyan (#64D2FF), under 500 ms blue (#0A84FF fill, #5EADFF text), otherwise purple (#BF5AF2 fill, #DA8FFF text).
 - **Do** set content on the ground and separate it with space and one-device-pixel seams.
 - **Do** reach for native structure first: grouped `Form`, `Table`, `List`, `.searchable`, toolbar items, `ContentUnavailableView`.
+- **Do** draw the sidebar selection as the neutral fill, never the system accent blue.
 - **Do** keep the window dark in either system appearance (`window.appearance = .darkAqua`, Midnight background); the pill forces dark too.
 - **Do** lead Home with the 7-day median, so one slow dictation can't paint the headline.
 
 ### Don't:
 - **Don't** use cyan, blue or purple for anything but a time or the pill's listening level.
 - **Don't** draw outlined boxes around groups, or stat cards.
-- **Don't** put Liquid Glass behind content; it belongs to the chrome and the pill.
+- **Don't** put the readings on glass or stack glass on glass; glass is for what floats.
 - **Don't** use neon or saturated navy; the palette stays quiet so the stripes carry the colour.
 - **Don't** set a figure in Speed Blue or Speed Purple, or group digits in a time.
 - **Don't** draw shadows, glows or gradients in SwiftUI, beyond the one ambient light behind the window.

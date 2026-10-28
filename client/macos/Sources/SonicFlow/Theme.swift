@@ -108,6 +108,16 @@ extension View {
         scrollContentBackground(.hidden)
     }
 
+    /// A Liquid Glass panel for the few groups that float on Home; Panel navy before macOS 26.
+    @ViewBuilder func glassPanel(cornerRadius: CGFloat = 22) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if #available(macOS 26, *) {
+            glassEffect(.regular, in: shape)
+        } else {
+            background(Theme.panel, in: shape)
+        }
+    }
+
     /// Apple's glass button where the system has it, a bordered button before.
     @ViewBuilder func glassButton() -> some View {
         if #available(macOS 26, *) {
@@ -137,14 +147,16 @@ struct AmbientLight: View {
             ZStack {
                 Theme.ground
                 ZStack {
-                    Circle().fill(Theme.cyan.opacity(0.22))
-                        .frame(width: size.width * 0.55).position(x: size.width * 0.08, y: size.height * 0.12)
-                    Circle().fill(Theme.blue.opacity(0.16))
-                        .frame(width: size.width * 0.6).position(x: size.width * 0.5, y: -size.height * 0.05)
-                    Circle().fill(Theme.violet.opacity(0.12))
-                        .frame(width: size.width * 0.55).position(x: size.width * 0.98, y: size.height * 1.02)
+                    Circle().fill(Theme.cyan.opacity(0.34))
+                        .frame(width: size.width * 0.42).position(x: size.width * 0.06, y: size.height * 0.18)
+                    Circle().fill(Theme.blue.opacity(0.26))
+                        .frame(width: size.width * 0.5).position(x: size.width * 0.45, y: -size.height * 0.02)
+                    Circle().fill(Theme.violet.opacity(0.26))
+                        .frame(width: size.width * 0.34).position(x: size.width * 0.88, y: size.height * 0.3)
+                    Circle().fill(Theme.violet.opacity(0.16))
+                        .frame(width: size.width * 0.5).position(x: size.width * 0.7, y: size.height * 1.05)
                 }
-                .blur(radius: 140)
+                .blur(radius: 90)
             }
             .drawingGroup()
         }

@@ -19,7 +19,7 @@ OWN-WORLD: Midnight ground, content unboxed and split by one-device-pixel seams;
 
 STORY: Opening the window, you see at once that SonicFlow is fast (the latest time and its stripe), then whether it is ready, then what you said. Everything else is a tidy panel away.
 
-FIRST VIEWPORT: Glass sidebar in three sections. Top row: the 7-day median as the display figure with its stripe on the fixed 0–600 ms scale and 100 ms instant tick, a typing comparison at the user's own speed, Latest and Slowest 5% as thinner stripes, beside an Engine column across a vertical seam. A ruled Today band, then Recent rows.
+FIRST VIEWPORT: Glass sidebar in three sections. Top row: the 7-day median as the display figure with its stripe on the fixed 0–600 ms scale and 100 ms instant tick, a typing comparison at the user's own speed, Latest and Slowest 5% as thinner stripes, beside a glass Engine panel. A glass Today band, then Recent rows.
 
 FORM: user-pinned fusion of three cards from round three: Night Velodrome's palette, Speed Stripe's signature, Developer Console's panel layout. seed:2772af55706b19c0
 

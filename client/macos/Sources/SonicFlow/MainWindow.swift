@@ -107,7 +107,7 @@ struct RootView: View {
     @ViewBuilder private var content: some View {
         if controller.settings.onboarded {
             NavigationSplitView {
-                List(selection: $navigation.pane) {
+                List {
                     Section { rows(.home, .history) }
                     Section("Personalize") { rows(.dictionary, .snippets, .styles) }
                     Section("Setup") { rows(.models, .settings) }
@@ -140,11 +140,20 @@ struct RootView: View {
         }
     }
 
+    /// Rows draw their own selection: the native one is the system accent blue, which SwiftUI's tint
+    /// can't reach without an asset catalog.
     private func rows(_ panes: Pane...) -> some View {
         ForEach(panes) { pane in
-            Label(pane.title, systemImage: pane.symbol)
-                .badge(count(pane))
-                .tag(pane)
+            Button { navigation.pane = pane } label: {
+                Label(pane.title, systemImage: pane.symbol)
+                    .foregroundStyle(Theme.text)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .badge(count(pane))
+            .listRowBackground(SidebarSelection(isSelected: (navigation.pane ?? .home) == pane))
+            .accessibilityAddTraits((navigation.pane ?? .home) == pane ? .isSelected : [])
         }
     }
 
@@ -155,5 +164,15 @@ struct RootView: View {
         case .snippets: controller.personalization.snippets.count
         default: 0
         }
+    }
+}
+
+private struct SidebarSelection: View {
+    let isSelected: Bool
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(Color.white.opacity(isSelected ? 0.11 : 0))
+            .padding(.horizontal, 10)
     }
 }

@@ -13,10 +13,11 @@ struct HomeView: View {
                 HStack(alignment: .top, spacing: 0) {
                     LatencyBoard(controller: controller, settingsModel: settingsModel, navigation: navigation)
                         .padding(.trailing, 32)
-                    Rectangle().fill(Theme.seam).frame(width: 1)
                     EngineColumn(controller: controller, settingsModel: settingsModel)
                         .frame(width: 250)
-                        .padding(.leading, 32)
+                        .padding(22)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .glassPanel()
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 32)
@@ -164,7 +165,6 @@ private struct EngineColumn: View {
                     .font(.headline)
                     .accessibilityAddTraits(.isHeader)
             }
-            .padding(.top, 10)
             .padding(.bottom, 4)
             KeyValue("Hotkey", controller.settings.hotkey.title)
             KeyValue("Mode", controller.settings.talkMode == .hold ? "Hold to talk" : "Tap to toggle")
@@ -209,7 +209,7 @@ private struct KeyValue: View {
     }
 }
 
-/// Today's figures as a ruled band, like the lap counters under a timing board.
+/// Today's figures on a glass band, like the lap counters under a timing board.
 private struct TodayStrip: View {
     let stats: UsageStats
     let typingSpeed: Double
@@ -231,8 +231,8 @@ private struct TodayStrip: View {
             Figure(value: streak == 1 ? "1 day" : "\(streak) days", label: "streak")
         }
         .padding(.vertical, 18)
-        .overlay(alignment: .top) { Seam() }
-        .overlay(alignment: .bottom) { Seam() }
+        .padding(.horizontal, 22)
+        .glassPanel()
     }
 
     static func duration(_ seconds: Double) -> String {
