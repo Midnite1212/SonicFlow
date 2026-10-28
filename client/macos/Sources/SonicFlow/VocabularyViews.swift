@@ -160,7 +160,6 @@ private struct VocabularyPane<Rows: View>: View {
                 .padding(.vertical, 12)
                 .overlay(alignment: .top) { Seam() }
         }
-        .background(Theme.ground)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(addTitle, systemImage: "plus", action: add)

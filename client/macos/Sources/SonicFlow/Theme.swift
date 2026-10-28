@@ -25,7 +25,8 @@ enum Theme {
 
     /// Every stripe shares this scale so any two latencies compare by length.
     static let scaleMs: Double = 600
-    static let budgetMs: Double = 500
+    /// Under about 100 ms a response feels instantaneous (Card, Moran & Newell; Nielsen's 0.1 s limit).
+    static let instantMs: Double = 100
 
     enum Speed {
         case fast, normal, slow
@@ -66,7 +67,7 @@ extension Color {
 struct SpeedStripe: View {
     let ms: Double?
     var height: CGFloat = 6
-    var showsBudget = false
+    var showsInstant = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -87,11 +88,11 @@ struct SpeedStripe: View {
                     }
                     .offset(x: width - 16)
                 }
-                if showsBudget {
+                if showsInstant {
                     Rectangle()
                         .fill(Theme.tertiary)
                         .frame(width: 1, height: height + 8)
-                        .offset(x: width * Theme.budgetMs / Theme.scaleMs)
+                        .offset(x: width * Theme.instantMs / Theme.scaleMs)
                 }
             }
             .frame(maxHeight: .infinity)
@@ -102,18 +103,52 @@ struct SpeedStripe: View {
 }
 
 extension View {
-    /// The navy ground behind a pane, with system list and form backgrounds removed.
+    /// Lets the window's ambient light show through, with system list and form backgrounds removed.
     func paneBackground() -> some View {
         scrollContentBackground(.hidden)
-            .background(Theme.ground)
+    }
+
+    /// Apple's glass button where the system has it, a bordered button before.
+    @ViewBuilder func glassButton() -> some View {
+        if #available(macOS 26, *) {
+            // Clear tint: the green control tint would otherwise colour every glass button.
+            buttonStyle(.glass(.regular)).tint(.clear)
+        } else {
+            buttonStyle(.bordered)
+        }
     }
 
     /// A System Settings–style grouped form on the navy ground.
     func settingsForm() -> some View {
         formStyle(.grouped)
+            .glassButton()
             .frame(maxWidth: 720)
             .frame(maxWidth: .infinity)
             .paneBackground()
+    }
+}
+
+/// A faint wash of the speed hues behind the whole window, so the glass sidebar and toolbar have light
+/// to bend. Without it they sit on flat navy and read as plain panels.
+struct AmbientLight: View {
+    var body: some View {
+        GeometryReader { geometry in
+            let size = geometry.size
+            ZStack {
+                Theme.ground
+                ZStack {
+                    Circle().fill(Theme.cyan.opacity(0.22))
+                        .frame(width: size.width * 0.55).position(x: size.width * 0.08, y: size.height * 0.12)
+                    Circle().fill(Theme.blue.opacity(0.16))
+                        .frame(width: size.width * 0.6).position(x: size.width * 0.5, y: -size.height * 0.05)
+                    Circle().fill(Theme.violet.opacity(0.12))
+                        .frame(width: size.width * 0.55).position(x: size.width * 0.98, y: size.height * 1.02)
+                }
+                .blur(radius: 140)
+            }
+            .drawingGroup()
+        }
+        .ignoresSafeArea()
     }
 }
 

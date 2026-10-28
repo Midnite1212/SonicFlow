@@ -11,7 +11,7 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top, spacing: 0) {
-                    LatencyBoard(controller: controller)
+                    LatencyBoard(controller: controller, settingsModel: settingsModel, navigation: navigation)
                         .padding(.trailing, 32)
                     Rectangle().fill(Theme.seam).frame(width: 1)
                     EngineColumn(controller: controller, settingsModel: settingsModel)
@@ -20,7 +20,10 @@ struct HomeView: View {
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 32)
-                TodayStrip(stats: controller.stats)
+                TodayStrip(
+                    stats: controller.stats,
+                    typingSpeed: controller.settings.typingWordsPerMinute ?? TypingTest.averageWordsPerMinute
+                )
                 RecentList(controller: controller, navigation: navigation)
                     .padding(.top, 32)
             }
@@ -38,6 +41,8 @@ struct HomeView: View {
 /// The typical speed leads, so one slow dictation can't paint the headline; the latest sits below.
 private struct LatencyBoard: View {
     let controller: DictationController
+    let settingsModel: SettingsModel
+    let navigation: Navigation
 
     var body: some View {
         let latest = controller.history.entries.first { !$0.isEdit }
@@ -54,7 +59,8 @@ private struct LatencyBoard: View {
                 }
                 Text(median == nil ? "Release to text, latest dictation" : "Release to text, median of the last 7 days")
                     .foregroundStyle(Theme.secondary)
-                SpeedStripe(ms: hero, height: 12, showsBudget: true)
+                typingComparison(since: week)
+                SpeedStripe(ms: hero, height: 12, showsInstant: true)
                     .padding(.top, 22)
                 ScaleLabels()
                     .padding(.top, 2)
@@ -70,7 +76,7 @@ private struct LatencyBoard: View {
                 Text("Hold \(controller.settings.hotkey.title) in any text field, speak, and release.")
                     .foregroundStyle(Theme.secondary)
                     .padding(.top, 4)
-                SpeedStripe(ms: nil, height: 12, showsBudget: true)
+                SpeedStripe(ms: nil, height: 12, showsInstant: true)
                     .padding(.top, 22)
                 ScaleLabels()
                     .padding(.top, 2)
@@ -79,18 +85,46 @@ private struct LatencyBoard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// What the same words would cost at the keyboard, at the user's measured speed when they have one.
+    @ViewBuilder private func typingComparison(since cutoff: Date) -> some View {
+        let words = controller.history.entries.filter { !$0.isEdit && $0.date >= cutoff }.map(\.wordCount).sorted()
+        if !words.isEmpty {
+            let typical = words[words.count / 2]
+            let measured = controller.settings.typingWordsPerMinute
+            let speed = measured ?? TypingTest.averageWordsPerMinute
+            let seconds = TypingTest.secondsToType(words: typical, wordsPerMinute: speed)
+            HStack(spacing: 6) {
+                Text("Typing a typical \(typical)-word dictation at \(Int(speed.rounded())) wpm takes about \(Self.duration(seconds)).")
+                    .foregroundStyle(Theme.tertiary)
+                if measured == nil {
+                    Button("Measure Yours") {
+                        navigation.pane = .settings
+                        settingsModel.typingTest = TypingTestModel()
+                    }
+                    .buttonStyle(.link)
+                    .foregroundStyle(Theme.secondary)
+                    .focusable(false)
+                }
+            }
+            .font(.callout)
+            .padding(.top, 2)
+        }
+    }
+
+    static func duration(_ seconds: Double) -> String {
+        let whole = Int(seconds.rounded())
+        return whole < 60 ? "\(whole) s" : "\(whole / 60) min \(whole % 60) s"
+    }
 }
 
 private struct ScaleLabels: View {
     var body: some View {
         GeometryReader { geometry in
-            let width = geometry.size.width
-            HStack(spacing: 0) {
+            let tick = geometry.size.width * Theme.instantMs / Theme.scaleMs
+            ZStack(alignment: .leading) {
                 Text("0")
-                Spacer()
-                Text("500 ms budget")
+                Text("100 ms, feels instant").offset(x: tick + 6)
             }
-            .frame(width: width * Theme.budgetMs / Theme.scaleMs)
         }
         .font(.caption.monospacedDigit())
         .foregroundStyle(Theme.tertiary)
@@ -178,6 +212,7 @@ private struct KeyValue: View {
 /// Today's figures as a ruled band, like the lap counters under a timing board.
 private struct TodayStrip: View {
     let stats: UsageStats
+    let typingSpeed: Double
 
     var body: some View {
         let today = stats.totals(lastDays: 1)
@@ -188,7 +223,10 @@ private struct TodayStrip: View {
             Rule()
             Figure(value: week.wordsPerMinute.map { "\(Int($0.rounded())) wpm" } ?? "—", label: "speaking pace, 7 days")
             Rule()
-            Figure(value: Self.duration(stats.totals(lastDays: nil).timeSavedSeconds()), label: "saved vs typing")
+            Figure(
+                value: Self.duration(stats.totals(lastDays: nil).timeSavedSeconds(typingWordsPerMinute: typingSpeed)),
+                label: "saved vs typing"
+            )
             Rule()
             Figure(value: streak == 1 ? "1 day" : "\(streak) days", label: "streak")
         }
@@ -234,9 +272,9 @@ private struct RecentList: View {
                 Text("Recent").font(.headline).foregroundStyle(Theme.text).accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button("Show All") { navigation.pane = .history }
-                    .buttonStyle(.link)
+                    .glassButton()
+                    .controlSize(.small)
                     .focusable(false)
-                    .foregroundStyle(Theme.secondary)
                     .disabled(entries.isEmpty)
             }
             if entries.isEmpty {

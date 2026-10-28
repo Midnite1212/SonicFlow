@@ -15,6 +15,7 @@ final class SettingsModel {
     var launchAtLogin = SMAppService.mainApp.status == .enabled
     var loginMessage: String?
     var confirmingClear = false
+    var typingTest: TypingTestModel?
 
     func refresh() async {
         devices = AudioDevices.inputs()
@@ -120,6 +121,21 @@ struct SettingsView: View {
                         .disabled(controller.history.entries.isEmpty)
                 }
             }
+            Section("Typing speed") {
+                LabeledContent {
+                    Button(settings.typingWordsPerMinute == nil ? "Take Typing Test…" : "Retake Test…") {
+                        model.typingTest = TypingTestModel()
+                    }
+                } label: {
+                    if let speed = settings.typingWordsPerMinute {
+                        Text("\(Int(speed.rounded())) wpm")
+                        Text("Time saved compares dictating with typing at your own speed.")
+                    } else {
+                        Text("Not measured")
+                        Text("Time saved assumes an average typist at \(Int(TypingTest.averageWordsPerMinute)) wpm until you take the one-minute test.")
+                    }
+                }
+            }
             Section("Engine") {
                 LabeledContent {
                     Button("Open Models") { navigation.pane = .models }
@@ -144,6 +160,14 @@ struct SettingsView: View {
         .settingsForm()
         .navigationTitle("Settings")
         .task { await model.refresh() }
+        .sheet(item: $model.typingTest) { test in
+            TypingTestView(model: test) { speed in
+                settings.typingWordsPerMinute = speed
+                model.typingTest = nil
+            } cancel: {
+                model.typingTest = nil
+            }
+        }
         .confirmationDialog("Clear all dictation history?", isPresented: $model.confirmingClear) {
             Button("Clear History", role: .destructive) { controller.clearHistory() }
         } message: {

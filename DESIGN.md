@@ -94,7 +94,7 @@ components:
   stripe-slow:
     backgroundColor: "{colors.violet}"
     rounded: "{rounded.capsule}"
-  stripe-budget-tick:
+  stripe-instant-tick:
     backgroundColor: "{colors.tertiary}"
     width: "1px"
   pill:
@@ -114,7 +114,7 @@ components:
 
 SonicFlow is the timing board at a velodrome after dark. The content is set straight on a deep, quiet navy: figures, stripes and hairline rules, with no boxes around them. Every latency is drawn as a livery stripe, and its length is its time on one fixed scale, so any two stripes anywhere in the app compare by length. Cyan, blue and purple, the logo's hues in Apple's calibrated system versions, appear only as that speed scale.
 
-Everything around the content is the Mac's own: the Liquid Glass sidebar and toolbar, grouped forms, tables, search and controls. Glass is chrome, never content. The one glass surface SonicFlow draws itself is the pill, because it floats over other apps.
+Everything around the content is the Mac's own: the Liquid Glass sidebar and toolbar, grouped forms, tables, search and glass buttons. Glass is chrome, never content. A faint ambient light of the speed hues lies behind the whole window, because glass only shows by bending what is behind it; on flat navy it reads as a plain panel. The one glass surface SonicFlow draws itself is the pill, because it floats over other apps.
 
 The window is opened now and then, so it is calm. It shows speed first, then whether the engine is ready, then what was said.
 
@@ -123,7 +123,7 @@ The world rejects the category defaults: grey or white stat cards with one blue 
 **Key Characteristics:**
 - Deep navy ground; content unboxed, separated by one-device-pixel seams.
 - Cyan, blue and purple mean speed and nothing else: under 200 ms, under 500 ms, slower.
-- One stripe scale everywhere: 0–600 ms, with a 500 ms budget tick.
+- One stripe scale everywhere: 0–600 ms, with a tick at 100 ms, where a response starts to feel instant.
 - Native chrome: Liquid Glass sidebar and toolbar, grouped forms, tables, `.searchable`.
 - SF Pro throughout, tabular digits for every figure.
 - The same dark world in both system appearances.
@@ -146,12 +146,13 @@ The thresholds come from `Theme.Speed(ms:)`: `ms < 200` is fast, `ms < 500` is n
 - **Alert Coral** (#F2706A): the engine-offline dot, "Needs permission", errors, and the pill's recording dot while listening.
 
 ### Neutral
-- **Midnight** (#0D111C): the window background behind every pane and onboarding, and the pill's glass tint. It also colours the stripe's break notch.
+- **Midnight** (#0D111C): the base of the window behind every pane and onboarding, and the pill's glass tint. It also colours the stripe's break notch.
+- **Ambient light** (`AmbientLight`): three heavily blurred discs over Midnight — cyan at 22% top-left behind the sidebar, blue at 16% along the top, purple at 12% bottom-right. It is the one gradient in the product and exists only so the glass has light to bend.
 - **Panel** (#161D2D): the onboarding practice editor.
 - **Seam** (#262E42): every rule: the Home board's dividers, list separators and the empty stripe track.
 - **Off-White** (#E8EBF2): primary text, the command-mode wand, and the pill's level bars in command mode.
 - **Slate** (#A4ACBF): secondary text: captions, labels, explanatory copy, the "ms" unit, the "Edit" tag.
-- **Dim Slate** (#8089A0): metadata (times, app names), key labels, footers, the budget tick and the pill's processing dot. It holds 4.8:1 on Panel and 5.4:1 on Midnight.
+- **Dim Slate** (#8089A0): metadata (times, app names), key labels, footers, the instant tick and the pill's processing dot. It holds 4.8:1 on Panel and 5.4:1 on Midnight.
 
 ### Named Rules
 **The One Job Rule.** Cyan, blue and purple encode latency. The one other use is cyan for the pill's live input-level bars. A speed colour on anything else is a false reading.
@@ -167,7 +168,7 @@ Controls take Ready green as their tint (`RootView.tint(Theme.ready)`), so switc
 **Font:** SF Pro (system font) for everything. Figures use its tabular digits (`.monospacedDigit()`), not SF Mono, which reads as code next to prose.
 
 ### Hierarchy
-- **Display** (semibold, 64pt, tabular): Home's 7-day median release-to-text time, coloured by its speed step, with a `title2` medium "ms" in Slate on the first baseline and a Slate caption beneath saying what it measures. With no median, it shows the latest time and says so.
+- **Display** (semibold, 64pt, tabular): Home's 7-day median release-to-text time, coloured by its speed step, with a `title2` medium "ms" in Slate on the first baseline and a Slate caption beneath saying what it measures. With no median, it shows the latest time and says so. A Callout Dim Slate line under it says how long typing a typical dictation takes at the user's measured speed (or an average 40 wpm, with a "Measure Yours" link).
 - **Headline** (`largeTitle` semibold, 26pt): onboarding welcome and done screens.
 - **Title** (`title` semibold, 22pt): onboarding step titles and Home's "No dictations yet".
 - **Figure** (`title2` semibold, 17pt, tabular): Today values.
@@ -175,7 +176,7 @@ Controls take Ready green as their tint (`RootView.tint(Theme.ready)`), so switc
 - **Body** (`body`, 13pt): dictated text, row labels, explanations.
 - **Callout** (`callout`, 12pt): metadata, key/value rows, footers and every ms figure in a row (tabular).
 - **Label** (`subheadline` semibold, 11pt): History day headers.
-- **Caption** (`caption`, 10pt, tabular): stripe scale labels ("0", "500 ms budget").
+- **Caption** (`caption`, 10pt, tabular): stripe scale labels ("0", "100 ms, feels instant").
 - **Pill** (system 12pt medium, tabular): the pill's timer and live ms count.
 
 No eyebrow labels above headings: a figure's caption sits under it.
@@ -198,7 +199,7 @@ The main window is a native `NavigationSplitView` with a unified toolbar (`scene
 
 ## Elevation & Depth
 
-Content is flat: no SwiftUI shadows, glows or gradients. Depth belongs to the system: the Liquid Glass sidebar and toolbar float over the content, and grouped forms draw their own rounded section fills.
+Content is flat: no SwiftUI shadows or glows, and no gradient except the ambient light behind the window. Depth belongs to the system: the Liquid Glass sidebar and toolbar float over the content and the ambient light, and grouped forms draw their own rounded section fills.
 
 ### Named Rules
 **The Glass Is Chrome Rule.** Liquid Glass is for surfaces that float above content: the system sidebar and toolbar, and the pill over other apps. Never put glass behind content in a pane.
@@ -216,22 +217,25 @@ A latency drawn as a livery stripe. The same component appears on Home, every Re
 - **Scale:** fill length = track width × min(ms / 600, 1). The scale is fixed at 0–600 ms everywhere and never rescales to fit the data.
 - **Track:** a 1px Seam capsule across the full width.
 - **Fill:** a capsule in the step's fill colour. Heights are 12px (Home readout), 6px (pill, onboarding) or 4px (rows). The frame adds 8px of vertical room.
-- **Budget tick:** a 1px Dim Slate line at 500/600 of the width, 8px taller than the stripe, on the Home readout and onboarding, with "0" and "500 ms budget" caption labels under the readout.
+- **Instant tick:** a 1px Dim Slate line at 100/600 of the width, 8px taller than the stripe, on the Home readout and onboarding, with "0" and "100 ms, feels instant" caption labels under the readout. Around 100 ms is where a response stops feeling like a wait (Card, Moran and Newell; Nielsen's 0.1 s limit), which means more to someone dictating than an engineering budget does.
 - **Over scale:** past 600 ms the fill runs full width and carries a break notch: two 2px Midnight bars rotated 20°, 2px apart, 16px from the right end.
-- **Empty:** only the track (and the budget tick, where shown), and the figure reads "—" in Dim Slate.
+- **Empty:** only the track (and the instant tick, where shown), and the figure reads "—" in Dim Slate.
 - **Accessibility:** labelled "N milliseconds" or "No time yet".
 
 ### Home board
-- **Latency readout:** the Display figure and its caption, the 12px stripe with budget tick and scale labels, then Latest and "Slowest 5%" (the 7-day p95) as 4px stripe rows.
+- **Latency readout:** the Display figure, its caption and the typing comparison, the 12px stripe with the instant tick and scale labels, then Latest and "Slowest 5%" (the 7-day p95) as 4px stripe rows.
 - **Engine column:** an 8px status dot beside "Engine ready" or "Engine offline" (Section), then Callout key/value rows (key in Dim Slate, value in Off-White): Hotkey, Mode, Speech, Cleanup, Permissions. Missing permissions show an Alert Coral line and one small button each.
 - **Today band:** four equal figures (Figure over a Callout Dim Slate label) split by 1×40pt seams, 18pt vertical padding, seams above and below.
-- **Recent:** a Section heading with a "Show All" link, then up to eight rows split by seams.
+- **Recent:** a Section heading with a small glass "Show All" button, then up to eight rows split by seams.
+
+### Typing test
+A sheet from Settings › Typing speed (or Home's "Measure Yours"): a passage on Panel, characters turning Off-White when right and Alert Coral when wrong, a text field, a live wpm figure, and Cancel / Use This Speed. Net wpm counts correctly typed words, five characters to a word. Only the number is saved; time saved and Home's typing line use it.
 
 ### Forms
 Native grouped forms. A row's explanation is the control label's second `Text`, which the system sets as a secondary line. Buttons inside rows are native bordered buttons; per-model actions are `.controlSize(.small)`. Pickers are the form's native popup.
 
 ### Buttons
-Native macOS buttons (bordered, borderless, link) with no custom styling. Default actions use `.keyboardShortcut(.defaultAction)`. Toolbar actions use SF Symbols with a help tag naming the shortcut.
+Glass buttons (`.glass(.regular)` with a clear tint, so the green control tint doesn't colour them) in forms and on Home; bordered before macOS 26. Links and borderless buttons where text is the action. Default actions use `.keyboardShortcut(.defaultAction)`. Toolbar actions use SF Symbols with a help tag naming the shortcut.
 
 ### Lists and Tables
 - **History row:** the full text, then a Callout Dim Slate metadata line (time, app, word count, optional Edit tag, a 160pt stripe, the ms figure). A copy icon appears on hover; the context menu offers Copy and Delete.
@@ -254,7 +258,7 @@ SwiftPM records the deployment target (macOS 14) as the SDK version, which makes
 ## Do's and Don'ts
 
 ### Do:
-- **Do** draw every latency as a Speed Stripe on the fixed 0–600 ms scale with the 500 ms budget.
+- **Do** draw every latency as a Speed Stripe on the fixed 0–600 ms scale with the 100 ms instant tick.
 - **Do** colour a time by `Theme.Speed(ms:)`: under 200 ms cyan (#64D2FF), under 500 ms blue (#0A84FF fill, #5EADFF text), otherwise purple (#BF5AF2 fill, #DA8FFF text).
 - **Do** set content on the ground and separate it with space and one-device-pixel seams.
 - **Do** reach for native structure first: grouped `Form`, `Table`, `List`, `.searchable`, toolbar items, `ContentUnavailableView`.
@@ -267,5 +271,5 @@ SwiftPM records the deployment target (macOS 14) as the SDK version, which makes
 - **Don't** put Liquid Glass behind content; it belongs to the chrome and the pill.
 - **Don't** use neon or saturated navy; the palette stays quiet so the stripes carry the colour.
 - **Don't** set a figure in Speed Blue or Speed Purple, or group digits in a time.
-- **Don't** draw shadows, glows or gradients in SwiftUI.
+- **Don't** draw shadows, glows or gradients in SwiftUI, beyond the one ambient light behind the window.
 - **Don't** use SF Mono for figures, or eyebrow labels above headings.

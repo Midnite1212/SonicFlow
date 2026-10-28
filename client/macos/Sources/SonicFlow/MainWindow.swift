@@ -101,7 +101,7 @@ struct RootView: View {
 
     var body: some View {
         // Affirmative green, so switches and default buttons never borrow a speed colour.
-        content.tint(Theme.ready)
+        content.tint(Theme.ready).background(AmbientLight())
     }
 
     @ViewBuilder private var content: some View {
