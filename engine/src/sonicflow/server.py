@@ -141,6 +141,7 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend, lan_port: int = 8766) -
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        await engine.run(residency.limit_cache)
         await engine.run(engine.load, asr)
         await engine.run(engine.load, cleanup)
         await engine.run(common_words)

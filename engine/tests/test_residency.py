@@ -48,3 +48,10 @@ def test_opt_out_skips_locking(monkeypatch):
     engine.load(asr)
     engine.unload(asr)
     assert unlocked == []
+
+
+def test_limit_cache_caps_mlx_buffer_cache(monkeypatch):
+    monkeypatch.setenv("SONICFLOW_MLX_CACHE_MB", "64")
+    residency.limit_cache()
+    # set_cache_limit returns the limit it replaces.
+    assert mx.set_cache_limit(mx.device_info()["memory_size"]) == 64 * 2**20
