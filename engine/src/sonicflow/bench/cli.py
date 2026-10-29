@@ -108,6 +108,7 @@ def run_item(
     inference: ThreadPoolExecutor,
     pause_s: float = 0.0,
     use_rolling: bool = False,
+    partials: bool = False,
 ) -> ItemResult:
     """Runs one utterance the way the server does: every model call on the one `inference`
     thread, and with `use_rolling` the pause work queued there while audio keeps arriving."""
@@ -117,7 +118,14 @@ def run_item(
     context = CleanupContext()
     stream = inference.submit(asr.stream).result()
     speech = (
-        rolling.Rolling(asr, cleanup, context, lambda text: text, inference.submit)
+        rolling.Rolling(
+            asr,
+            cleanup,
+            context,
+            lambda text: text,
+            inference.submit,
+            (lambda utterance, text: None) if partials else None,
+        )
         if use_rolling
         else None
     )
@@ -217,6 +225,9 @@ def main() -> None:
         default=0,
         help="silence after the last word before release, as when the hotkey is held a moment",
     )
+    parser.add_argument(
+        "--partials", action="store_true", help="show the transcript while speaking, like the app"
+    )
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--max-regression", type=float, default=0.10)
     args = parser.parse_args()
@@ -247,6 +258,7 @@ def main() -> None:
                 inference,
                 args.pause_ms / 1000,
                 uses_rolling,
+                args.partials,
             )
             for item in items
         ]
@@ -268,6 +280,7 @@ def main() -> None:
                 "cleanup": args.cleanup,
                 "machine": machine_name(),
                 "realtime": args.realtime,
+                "partials": args.partials,
                 "rolling": uses_rolling,
                 "pause_ms": args.pause_ms,
                 "chunk_ms": args.chunk_ms,

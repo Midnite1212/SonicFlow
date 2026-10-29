@@ -246,8 +246,20 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend, lan_port: int = 8766) -
         vocabulary = Vocabulary()
         style: str | None = None
 
+        loop = asyncio.get_running_loop()
+
         async def send_error(message: str) -> None:
             await ws.send_json({"type": "error", "message": message})
+
+        def show_partial(utterance: rolling.Rolling, raw: str) -> None:
+            """Sends a pause's transcript from the inference thread, unless its utterance has
+            already ended."""
+
+            async def send() -> None:
+                if speech is utterance:
+                    await ws.send_json({"type": "partial", "text": raw})
+
+            asyncio.run_coroutine_threadsafe(send(), loop)
 
         async def finish(raw: str, selection: object) -> str:
             if isinstance(selection, str) and selection.strip():
@@ -303,7 +315,12 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend, lan_port: int = 8766) -
                             speech.cancel()
                         speech = (
                             rolling.Rolling(
-                                engine.asr, cleanup, context, vocabulary.correct, engine.submit
+                                engine.asr,
+                                cleanup,
+                                context,
+                                vocabulary.correct,
+                                engine.submit,
+                                show_partial if event.get("partials") is True else None,
                             )
                             if engine.asr.rolling and rolling.enabled()
                             else None

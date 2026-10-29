@@ -53,3 +53,8 @@ import Testing
 @Test func stopWithSelectionEscapesText() {
     #expect(ServerMessage.stop(selection: "say \"hi\"\n") == #"{"selection":"say \"hi\"\n","type":"stop"}"#)
 }
+
+@Test func startMessageAsksForPartialsOnlyWhenShown() {
+    #expect(StartMessage.json(app: nil, dictionary: [], snippets: [], partials: true).contains(#""partials":true"#))
+    #expect(!StartMessage.json(app: nil, dictionary: [], snippets: []).contains("partials"))
+}

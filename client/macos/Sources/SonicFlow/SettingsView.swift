@@ -128,6 +128,14 @@ struct SettingsView: View {
                 ) {
                     Toggle("Learn words from your corrections", isOn: $settings.learnFromCorrections).rowSwitch()
                 }
+                Seam()
+                GlassRow(
+                    "Show what you say",
+                    hint: "Above the pill, the words heard so far appear at each pause, and after release "
+                        + "what cleanup removed. History keeps the words heard beside each dictation."
+                ) {
+                    Toggle("Show what you say", isOn: $settings.showTranscript).rowSwitch()
+                }
             }
             GlassSection("Microphone") {
                 GlassRow("Input") {

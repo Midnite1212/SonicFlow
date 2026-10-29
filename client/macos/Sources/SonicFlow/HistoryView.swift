@@ -92,6 +92,14 @@ struct HistoryRow: View {
                 Text(entry.text)
                     .foregroundStyle(Theme.text)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                if let raw = entry.raw {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text("Heard").fontWeight(.semibold)
+                        Text(PillView.heard(raw: raw, cleaned: entry.text))
+                    }
+                    .font(.callout)
+                    .foregroundStyle(Theme.secondary)
+                }
                 HStack(spacing: 12) {
                     Text(entry.date, style: .time).monospacedDigit()
                     if let app = entry.appName { Text(app) }

@@ -136,8 +136,67 @@ def test_server_reuses_the_pause_transcript():
         ws.send_json({"type": "stop"})
         final = ws.receive_json()
 
+    assert final["type"] == "final"
     assert final["raw"] == f"Ship it Friday, no wait, Thursday. Heard {asr.calls[0]}."
     assert len(asr.calls) == 1
+
+
+def test_server_sends_the_transcript_so_far_when_asked():
+    asr = CountingASR()
+    with (
+        TestClient(create_app(asr, PassthroughCleanup())) as client,
+        client.websocket_connect("/v1/dictate") as ws,
+    ):
+        ws.send_json({"type": "start", "partials": True})
+        for data in pcm16(speech(1) + silence(0.5)):
+            ws.send_bytes(data)
+        ws.send_json({"type": "stop"})
+        messages = []
+        while not messages or messages[-1]["type"] != "final":
+            messages.append(ws.receive_json())
+
+    *partials, final = messages
+    assert partials and all(m["type"] == "partial" for m in partials)
+    assert partials[-1]["text"] == final["raw"]
+
+
+def test_speech_without_pauses_is_shown_every_half_second():
+    asr, seen = CountingASR(), []
+    speech_ = Rolling(
+        asr,
+        PassthroughCleanup(),
+        CleanupContext(),
+        lambda text: text,
+        run_now,
+        lambda utterance, raw: seen.append(raw),
+    )
+    for chunk in speech(1.6):
+        speech_.add(chunk)
+    assert asr.calls == [8000, 16000, 24000]
+
+
+def test_after_a_pause_only_the_new_speech_is_transcribed():
+    asr, seen = CountingASR(), []
+    speech_ = Rolling(
+        asr,
+        PassthroughCleanup(),
+        CleanupContext(),
+        lambda text: text,
+        run_now,
+        lambda utterance, raw: seen.append(raw),
+    )
+    for chunk in speech(1) + silence(0.3) + speech(0.6):
+        speech_.add(chunk)
+    pause = round(1.3 * SAMPLE_RATE)
+    assert asr.calls[-2:] == [pause, round(0.5 * SAMPLE_RATE)]
+    assert seen[-1] == (
+        f"Ship it Friday, no wait, Thursday. Heard {pause}. "
+        f"Ship it Friday, no wait, Thursday. Heard {round(0.5 * SAMPLE_RATE)}."
+    )
+    speech_.release()
+    shown = len(seen)
+    speech_.add(speech(0.6)[0])
+    assert len(seen) == shown
 
 
 def level(value: float, seconds: float) -> list[np.ndarray]:
@@ -170,3 +229,26 @@ def test_cancelled_early_cleanup_still_reuses_the_transcript():
     speech_.release()
     speech_.transcript()
     assert len(asr.calls) == 1
+
+
+def test_a_filler_tail_is_not_shown():
+    class FillerTail(CountingASR):
+        def transcribe(self, audio: np.ndarray) -> str:
+            if not self.calls or len(audio) >= SAMPLE_RATE:
+                return super().transcribe(audio)
+            self.calls.append(len(audio))
+            return "Mm-hmm."
+
+    asr, seen = FillerTail(), []
+    speech_ = Rolling(
+        asr,
+        PassthroughCleanup(),
+        CleanupContext(),
+        lambda text: text,
+        run_now,
+        lambda utterance, raw: seen.append(raw),
+    )
+    for chunk in speech(1) + silence(0.3) + speech(0.6):
+        speech_.add(chunk)
+    assert len(asr.calls) == 4
+    assert all("Mm-hmm" not in text for text in seen)

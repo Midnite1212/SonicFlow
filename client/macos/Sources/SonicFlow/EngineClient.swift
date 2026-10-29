@@ -5,6 +5,8 @@ import SonicFlowCore
 /// audio, and stop always arrive in order. Reconnects while the engine is down.
 final class EngineClient: NSObject, URLSessionWebSocketDelegate {
     var onConnectionChange: ((Bool) -> Void)?
+    /// The transcript so far, while the user is still speaking.
+    var onPartial: ((String) -> Void)?
     let endpoint: EngineEndpoint
 
     private let retryDelay: TimeInterval
@@ -84,9 +86,12 @@ final class EngineClient: NSObject, URLSessionWebSocketDelegate {
             self.queue.async {
                 switch result {
                 case let .success(.string(text)):
-                    if let message = ServerMessage.decode(text), !Self.isPartial(message) {
+                    switch ServerMessage.decode(text) {
+                    case let .partial(text): self.onPartial?(text)
+                    case let message?:
                         self.pending?(message)
                         self.pending = nil
+                    case nil: break
                     }
                     self.receive(on: task)
                 case .success:
@@ -96,11 +101,6 @@ final class EngineClient: NSObject, URLSessionWebSocketDelegate {
                 }
             }
         }
-    }
-
-    private static func isPartial(_ message: ServerMessage) -> Bool {
-        if case .partial = message { return true }
-        return false
     }
 
     private func dropped(_ failed: URLSessionWebSocketTask) {

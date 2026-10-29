@@ -15,6 +15,7 @@ import numpy as np
 
 from sonicflow import SAMPLE_RATE
 from sonicflow.backends.base import ASRBackend, CleanupBackend, CleanupContext
+from sonicflow.speech import is_filler
 
 PAUSE_S = 0.25
 MIN_AUDIO_S = 0.5
@@ -26,6 +27,9 @@ SILENT = 0.05
 # cough early on can't make a soft last phrase pass for silence.
 NOISE_MARGIN = 2.0
 NOISE_FLOOR = 1e-4
+# While the transcript is shown, each this much new speech transcribes just what was said since
+# the last pause, so the words appear without waiting for one.
+SHOW_EVERY_S = 0.5
 
 
 def enabled() -> bool:
@@ -38,7 +42,9 @@ def _level(chunk: np.ndarray) -> float:
 
 class Rolling:
     """One utterance. `add` and `release` run on the caller's thread and hand work to `submit`,
-    which must run it on the inference thread in order; `transcript` runs there too."""
+    which must run it on the inference thread in order; `transcript` runs there too, as does
+    `on_transcript`, called with the transcript so far at each pause and every `SHOW_EVERY_S` of
+    speech."""
 
     def __init__(
         self,
@@ -47,12 +53,14 @@ class Rolling:
         context: CleanupContext,
         prepare_text: Callable[[str], str],
         submit: Callable[..., Future],
+        on_transcript: Callable[["Rolling", str], None] | None = None,
     ) -> None:
         self._asr = asr
         self._cleanup = cleanup
         self._context = context
         self._prepare_text = prepare_text
         self._submit = submit
+        self._on_transcript = on_transcript
         self._chunks: list[np.ndarray] = []
         self._levels: list[float] = []
         self._samples = 0
@@ -62,6 +70,10 @@ class Rolling:
         self._spoke_since_pass = False
         self._pass: Future | None = None
         self._pass_end = 0
+        self._pass_samples = 0
+        self._shown_at = 0
+        self._show: Future | None = None
+        self._released = False
         self._pause_levels: dict[int, float] = {}
         self._snapshot: tuple[int, str] | None = None
         self.cancelled = threading.Event()
@@ -82,15 +94,31 @@ class Rolling:
             self._quiet_s >= PAUSE_S
             and self._spoke_since_pass
             and self._samples >= MIN_AUDIO_S * SAMPLE_RATE
-            and (self._pass is None or self._pass.done())
+            and self._idle()
         ):
             self._spoke_since_pass = False
             self._pass_end = len(self._chunks)
+            self._pass_samples = self._samples
             self._pause_levels[self._pass_end] = max(self._levels[self._quiet_from :])
             self._pass = self._submit(self._run_pass, self._pass_end, np.concatenate(self._chunks))
+        elif (
+            self._on_transcript is not None
+            and not self._released
+            and self._quiet_s == 0.0
+            and self._samples - self._shown_at >= SHOW_EVERY_S * SAMPLE_RATE
+            and self._samples - self._pass_samples >= MIN_AUDIO_S * SAMPLE_RATE
+            and self._idle()
+        ):
+            self._shown_at = self._samples
+            tail = np.concatenate(self._chunks[self._pass_end :])
+            self._show = self._submit(self._show_tail, self._pass_end, tail)
+
+    def _idle(self) -> bool:
+        return all(work is None or work.done() for work in (self._pass, self._show))
 
     def release(self) -> None:
         """Stops work in flight unless its transcript will be the final one."""
+        self._released = True
         if not self._silent_since(self._pass_end):
             self.cancel()
 
@@ -115,5 +143,23 @@ class Rolling:
             return
         raw = self._asr.transcribe(audio)
         self._snapshot = (end, raw)
+        if raw and self._on_transcript is not None and not self._released:
+            self._on_transcript(self, raw)
         if raw and not self.cancelled.is_set():
             self._cleanup.prepare(self._prepare_text(raw), self._context, self.cancelled)
+
+    def _show_tail(self, start: int, tail: np.ndarray) -> None:
+        """Shows the last pause's transcript followed by what was said since, which is short and
+        quick to transcribe."""
+        if self._released or self.cancelled.is_set():
+            return
+        before = ""
+        if start:
+            if self._snapshot is None or self._snapshot[0] != start:
+                return
+            before = self._snapshot[1]
+        # A tail that starts in a pause can decode as "Mm-hmm" before its words arrive.
+        after = "" if is_filler(heard := self._asr.transcribe(tail)) else heard
+        text = " ".join(part for part in (before, after) if part)
+        if text and not self._released:
+            self._on_transcript(self, text)
