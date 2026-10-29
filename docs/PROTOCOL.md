@@ -43,7 +43,7 @@ Any installed model id, or `family:source`, is accepted by `POST /v1/config`. Th
 
 | Frame | Shape | Notes |
 |---|---|---|
-| text | `{"type": "start", "app": "<bundle id>?", "style": "<style>"?, "dictionary": [...]?, "snippets": [...]?}` | Opens an utterance |
+| text | `{"type": "start", "app": "<bundle id>?", "style": "<style>"?, "dictionary": [...]?, "snippets": [...]?, "partials": bool?}` | Opens an utterance; `"partials": true` asks for the transcript while the user speaks |
 | binary | PCM16 LE, mono, 16 kHz | Any chunk size; 100 ms (3200 bytes) recommended |
 | text | `{"type": "stop", "selection": "..."?}` | Hotkey released; finalize now. With `selection`, the utterance is a command (see below) |
 
@@ -51,7 +51,7 @@ Any installed model id, or `family:source`, is accepted by `POST /v1/config`. Th
 
 | Shape | When |
 |---|---|
-| `{"type": "partial", "text": "..."}` | The transcript so far, before cleanup: from streaming backends as text becomes available, and from rolling backends at each pause in speech. Never sent after `final` |
+| `{"type": "partial", "text": "..."}` | The transcript so far, before cleanup: from streaming backends as text becomes available, and, when `start` asked for partials, from rolling backends at each pause and every 0.5 s of speech. Never sent after `final` |
 | `{"type": "final", "raw": "...", "text": "...", "timings": {"asr_finalize_ms": n, "cleanup_ms": n, "total_ms": n}}` | After `stop` |
 | `{"type": "error", "message": "..."}` | Protocol misuse; session stays open |
 

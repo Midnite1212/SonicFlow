@@ -320,7 +320,7 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend, lan_port: int = 8766) -
                                 context,
                                 vocabulary.correct,
                                 engine.submit,
-                                show_partial,
+                                show_partial if event.get("partials") is True else None,
                             )
                             if engine.asr.rolling and rolling.enabled()
                             else None

@@ -44,8 +44,8 @@ public struct Snippet: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-/// The `start` message: the app being dictated into, its style, and the user's dictionary and
-/// snippets.
+/// The `start` message: the app being dictated into, its style, the user's dictionary and
+/// snippets, and whether to send the transcript while the user speaks.
 public enum StartMessage {
     private struct Payload: Encodable {
         struct Term: Encodable {
@@ -63,10 +63,12 @@ public enum StartMessage {
         let style: WritingStyle
         let dictionary: [Term]
         let snippets: [Shortcut]
+        let partials: Bool?
     }
 
     public static func json(
-        app: String?, style: WritingStyle = .standard, dictionary: [DictionaryTerm], snippets: [Snippet]
+        app: String?, style: WritingStyle = .standard, dictionary: [DictionaryTerm], snippets: [Snippet],
+        partials: Bool = false
     ) -> String {
         let payload = Payload(
             app: app,
@@ -76,7 +78,8 @@ public enum StartMessage {
                 .filter { !$0.term.isEmpty },
             snippets: snippets
                 .filter { !$0.trigger.trimmingCharacters(in: .whitespaces).isEmpty && !$0.text.isEmpty }
-                .map { Payload.Shortcut(trigger: $0.trigger, text: $0.text) }
+                .map { Payload.Shortcut(trigger: $0.trigger, text: $0.text) },
+            partials: partials ? true : nil
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys

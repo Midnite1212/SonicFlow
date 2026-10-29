@@ -28,7 +28,9 @@ final class Personalization {
         styles = Storage.load(StylePreferences.self, from: Self.stylesFile) ?? StylePreferences()
     }
 
-    func startMessage(app: String?) -> String {
-        StartMessage.json(app: app, style: styles.style(for: app), dictionary: terms, snippets: snippets)
+    func startMessage(app: String?, partials: Bool) -> String {
+        StartMessage.json(
+            app: app, style: styles.style(for: app), dictionary: terms, snippets: snippets, partials: partials
+        )
     }
 }

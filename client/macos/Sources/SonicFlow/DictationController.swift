@@ -283,7 +283,7 @@ final class DictationController {
         let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         engine = remoteConnected ? remoteEngine ?? localEngine : localEngine
         route.withLock { [engine] in $0 = engine }
-        engine.begin(personalization.startMessage(app: app))
+        engine.begin(personalization.startMessage(app: app, partials: settings.showTranscript))
         let micStart = ProcessInfo.processInfo.systemUptime
         do {
             try audio.start()
