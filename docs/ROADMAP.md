@@ -46,7 +46,7 @@
 ## v2 — Ideas
 
 - Code dictation that knows identifiers from the open repo
-- Auto-dictionary learned from edits you make after pasting
+- [x] Auto-dictionary learned from edits you make after pasting (#82, ADR 0008)
 - Voice → Claude Code prompt mode
 - iPhone keyboard client against the home engine
 

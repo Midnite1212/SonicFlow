@@ -119,6 +119,14 @@ struct SettingsView: View {
                     }
                     .rowPicker()
                 }
+                Seam()
+                GlassRow(
+                    "Learn words from your corrections",
+                    hint: "When you fix a misheard name or term right after pasting, it's added to your "
+                        + "Dictionary. The text you edit is read only to compare and is never saved."
+                ) {
+                    Toggle("Learn words from your corrections", isOn: $settings.learnFromCorrections).rowSwitch()
+                }
             }
             GlassSection("Microphone") {
                 GlassRow("Input") {

@@ -57,6 +57,7 @@ final class DictationController {
     /// The engine the current dictation streams to; read on the audio thread.
     @ObservationIgnored private let route = OSAllocatedUnfairLock<EngineClient?>(uncheckedState: nil)
     @ObservationIgnored private let pill = PillController()
+    @ObservationIgnored private let corrections = CorrectionWatcher()
     @ObservationIgnored private var hotkey: HotkeyMonitor?
     @ObservationIgnored private var commandRequested = false
     @ObservationIgnored private var selection: Task<String?, Never>?
@@ -87,6 +88,7 @@ final class DictationController {
                 self?.connectionChanged()
             }
         }
+        corrections.onLearn = { [weak self] words in self?.learn(words) }
         audio.onChunk = { [route] chunk in route.withLock { $0 }?.sendAudio(chunk) }
         audio.onLevel = { [weak self] level in
             Task { @MainActor in self?.pill.model.push(level) }
@@ -246,6 +248,7 @@ final class DictationController {
             }
             return
         }
+        corrections.stop()
         let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         engine = remoteConnected ? remoteEngine ?? localEngine : localEngine
         route.withLock { [engine] in $0 = engine }
@@ -342,7 +345,10 @@ final class DictationController {
                 if settings.saveHistory { persistHistory() }
             }
             Log.event("\(command ? "edit" : "dictation") delivered in \(Int(latency)) ms, \(text.count) chars")
-            if !text.isEmpty { Paster.paste(text) }
+            if !text.isEmpty {
+                Paster.paste(text)
+                if !command, settings.learnFromCorrections { corrections.watch(text) }
+            }
         case let .error(message):
             Log.event("engine error: \(message)")
             NSSound.beep()
@@ -366,6 +372,14 @@ final class DictationController {
             Paster.paste(text)
             Log.event("pasted last dictation, \(text.count) chars")
         }
+    }
+
+    private func learn(_ words: [LearnedWord]) {
+        guard settings.learnFromCorrections else { return }
+        let terms = DictionaryTerm.adding(words, to: personalization.terms)
+        guard terms != personalization.terms else { return }
+        personalization.terms = terms
+        Log.event("learned \(words.count) dictionary \(words.count == 1 ? "word" : "words") from corrections")
     }
 
     func copyFromHistory(_ entry: History.Entry) {

@@ -5,10 +5,25 @@ public struct DictionaryTerm: Identifiable, Codable, Equatable, Sendable {
     public var term: String
     /// Comma-separated mishearings, kept exactly as typed so editing never fights the cursor.
     public var heardAs: String
+    /// Added from the user's corrections rather than typed in.
+    public var learned: Bool
 
-    public init(term: String = "", heardAs: String = "") {
+    public init(term: String = "", heardAs: String = "", learned: Bool = false) {
         self.term = term
         self.heardAs = heardAs
+        self.learned = learned
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, term, heardAs, learned
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        term = try container.decode(String.self, forKey: .term)
+        heardAs = try container.decode(String.self, forKey: .heardAs)
+        learned = try container.decodeIfPresent(Bool.self, forKey: .learned) ?? false
     }
 
     public var heard: [String] {
