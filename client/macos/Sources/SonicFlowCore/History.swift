@@ -11,10 +11,12 @@ public struct History: Codable, Sendable {
         public let appName: String?
         /// Optional so history saved before command mode still decodes.
         private let edit: Bool?
+        /// What the speech model heard before cleanup, when cleanup changed it.
+        public let raw: String?
 
         public init(
             id: UUID = UUID(), text: String, date: Date, latencyMs: Double, appName: String? = nil,
-            isEdit: Bool = false
+            isEdit: Bool = false, raw: String? = nil
         ) {
             self.id = id
             self.text = text
@@ -22,6 +24,7 @@ public struct History: Codable, Sendable {
             self.latencyMs = latencyMs
             self.appName = appName
             self.edit = isEdit
+            self.raw = raw == text ? nil : raw
         }
 
         public var isEdit: Bool { edit ?? false }
@@ -39,10 +42,10 @@ public struct History: Codable, Sendable {
 
     public mutating func record(
         _ text: String, at date: Date = Date(), latencyMs: Double, appName: String? = nil,
-        isEdit: Bool = false
+        isEdit: Bool = false, raw: String? = nil
     ) {
         guard !text.isEmpty else { return }
-        let entry = Entry(text: text, date: date, latencyMs: latencyMs, appName: appName, isEdit: isEdit)
+        let entry = Entry(text: text, date: date, latencyMs: latencyMs, appName: appName, isEdit: isEdit, raw: raw)
         entries.insert(entry, at: 0)
         if entries.count > capacity {
             entries.removeLast(entries.count - capacity)

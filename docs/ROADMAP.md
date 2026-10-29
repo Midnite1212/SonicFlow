@@ -49,6 +49,7 @@
 - [x] Auto-dictionary learned from edits you make after pasting (#82, ADR 0008)
 - [x] Learning pane to review fixes the auto-dictionary held back (#88)
 - [x] Dictionary catches new mishearings that sound and look like a known word (#90)
+- [x] Live transcript above the pill, then what cleanup removed (#91)
 - Voice → Claude Code prompt mode
 - iPhone keyboard client against the home engine
 

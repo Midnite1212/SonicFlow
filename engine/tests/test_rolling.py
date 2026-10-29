@@ -134,10 +134,31 @@ def test_server_reuses_the_pause_transcript():
         for data in pcm16(speech(1) + silence(0.5)):
             ws.send_bytes(data)
         ws.send_json({"type": "stop"})
+        partial = ws.receive_json()
         final = ws.receive_json()
 
-    assert final["raw"] == f"Ship it Friday, no wait, Thursday. Heard {asr.calls[0]}."
+    raw = f"Ship it Friday, no wait, Thursday. Heard {asr.calls[0]}."
+    assert partial == {"type": "partial", "text": raw}
+    assert final["type"] == "final" and final["raw"] == raw
     assert len(asr.calls) == 1
+
+
+def test_each_pause_reports_the_transcript_so_far():
+    asr, seen = CountingASR(), []
+    speech_ = Rolling(
+        asr,
+        PassthroughCleanup(),
+        CleanupContext(),
+        lambda text: text,
+        run_now,
+        lambda utterance, raw: seen.append((utterance, raw)),
+    )
+    for chunk in speech(1) + silence(0.3) + speech(0.5) + silence(0.3):
+        speech_.add(chunk)
+    assert [raw for _, raw in seen] == [
+        f"Ship it Friday, no wait, Thursday. Heard {calls}." for calls in asr.calls
+    ]
+    assert len(seen) == 2 and all(utterance is speech_ for utterance, _ in seen)
 
 
 def level(value: float, seconds: float) -> list[np.ndarray]:

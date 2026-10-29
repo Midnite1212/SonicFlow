@@ -38,7 +38,8 @@ def _level(chunk: np.ndarray) -> float:
 
 class Rolling:
     """One utterance. `add` and `release` run on the caller's thread and hand work to `submit`,
-    which must run it on the inference thread in order; `transcript` runs there too."""
+    which must run it on the inference thread in order; `transcript` runs there too, as does
+    `on_transcript`, called with each pause's transcript so far."""
 
     def __init__(
         self,
@@ -47,12 +48,14 @@ class Rolling:
         context: CleanupContext,
         prepare_text: Callable[[str], str],
         submit: Callable[..., Future],
+        on_transcript: Callable[["Rolling", str], None] | None = None,
     ) -> None:
         self._asr = asr
         self._cleanup = cleanup
         self._context = context
         self._prepare_text = prepare_text
         self._submit = submit
+        self._on_transcript = on_transcript
         self._chunks: list[np.ndarray] = []
         self._levels: list[float] = []
         self._samples = 0
@@ -115,5 +118,7 @@ class Rolling:
             return
         raw = self._asr.transcribe(audio)
         self._snapshot = (end, raw)
+        if raw and self._on_transcript is not None:
+            self._on_transcript(self, raw)
         if raw and not self.cancelled.is_set():
             self._cleanup.prepare(self._prepare_text(raw), self._context, self.cancelled)

@@ -94,6 +94,7 @@ final class DictationController {
             }
         }
         corrections.onLearn = { [weak self] found in self?.learn(found) }
+        listenForPartials(from: localEngine)
         audio.onChunk = { [route] chunk in route.withLock { $0 }?.sendAudio(chunk) }
         audio.onLevel = { [weak self] level in
             Task { @MainActor in self?.pill.model.push(level) }
@@ -224,9 +225,21 @@ final class DictationController {
                 }
             }
             remoteEngine = client
+            listenForPartials(from: client)
             client.connect()
         }
         connectionChanged()
+    }
+
+    private func listenForPartials(from client: EngineClient) {
+        client.onPartial = { [weak self, weak client] text in
+            Task { @MainActor in
+                guard let self, let client, self.engine === client, self.settings.showTranscript,
+                    self.state == .listening || self.state == .processing
+                else { return }
+                self.pill.model.transcript = text
+            }
+        }
     }
 
     private func handle(_ input: HotkeyMonitor.Input) {
@@ -343,15 +356,21 @@ final class DictationController {
     }
 
     private func deliver(_ message: ServerMessage, command: Bool) {
-        pill.hide()
+        if case let .final(raw, text, _) = message, settings.showTranscript, !command, !text.isEmpty,
+            raw != text
+        {
+            pill.showResult(raw: raw, cleaned: text)
+        } else {
+            pill.hide()
+        }
         state = connected ? .idle : .offline
         switch message {
-        case let .final(_, text, _):
+        case let .final(raw, text, _):
             let latency = (ProcessInfo.processInfo.systemUptime - releasedAt) * 1000
             lastLatencyMs = latency
             if !text.isEmpty {
                 let app = NSWorkspace.shared.frontmostApplication?.localizedName
-                history.record(text, latencyMs: latency, appName: app, isEdit: command)
+                history.record(text, latencyMs: latency, appName: app, isEdit: command, raw: command ? nil : raw)
                 // An edit's words weren't spoken, so they stay out of the speaking stats.
                 if !command {
                     stats.record(

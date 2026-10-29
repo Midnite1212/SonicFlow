@@ -51,7 +51,7 @@ Any installed model id, or `family:source`, is accepted by `POST /v1/config`. Th
 
 | Shape | When |
 |---|---|
-| `{"type": "partial", "text": "..."}` | Streaming backends, as text becomes available |
+| `{"type": "partial", "text": "..."}` | The transcript so far, before cleanup: from streaming backends as text becomes available, and from rolling backends at each pause in speech. Never sent after `final` |
 | `{"type": "final", "raw": "...", "text": "...", "timings": {"asr_finalize_ms": n, "cleanup_ms": n, "total_ms": n}}` | After `stop` |
 | `{"type": "error", "message": "..."}` | Protocol misuse; session stays open |
 

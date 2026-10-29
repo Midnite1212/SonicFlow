@@ -1,18 +1,23 @@
 import AppKit
 import Observation
+import SonicFlowCore
 import SwiftUI
 
 @MainActor
 @Observable
 final class PillModel {
-    enum Phase {
+    enum Phase: Equatable {
         case idle, listening, processing
+        /// The dictation landed; what was heard stays up a moment beside the cleaned text.
+        case result(raw: String, cleaned: String)
     }
 
     static let barCount = 28
 
     var phase: Phase = .idle
     var command = false
+    /// What the engine heard so far, as of the last pause.
+    var transcript = ""
     var levels = [Float](repeating: 0, count: barCount)
     var startedAt = Date()
     var releasedAt = Date()
@@ -25,6 +30,7 @@ final class PillModel {
     func reset() {
         phase = .listening
         command = false
+        transcript = ""
         levels = [Float](repeating: 0, count: Self.barCount)
         startedAt = Date()
     }
@@ -39,7 +45,9 @@ final class PillModel {
 @MainActor
 final class PillController {
     let model = PillModel()
-    private static let size = NSSize(width: 230, height: 40)
+    /// Room above the capsule for the transcript; the empty part is clear and lets clicks through.
+    private static let size = NSSize(width: 560, height: 220)
+    private var shown = 0
 
     private lazy var panel: NSPanel = {
         let panel = NSPanel(
@@ -59,6 +67,7 @@ final class PillController {
     }()
 
     func show() {
+        shown += 1
         model.reset()
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
@@ -74,6 +83,19 @@ final class PillController {
         model.phase = .idle
         panel.orderOut(nil)
     }
+
+    /// Shows what was heard beside the cleaned text, for longer the more there is to read, unless
+    /// the next dictation starts first.
+    func showResult(raw: String, cleaned: String) {
+        model.phase = .result(raw: raw, cleaned: cleaned)
+        let shown = self.shown
+        let seconds = min(8, 2.5 + 0.15 * Double(History.wordCount(raw)))
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard let self, self.shown == shown, case .result = self.model.phase else { return }
+            self.hide()
+        }
+    }
 }
 
 struct PillView: View {
@@ -81,6 +103,47 @@ struct PillView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        VStack(spacing: 10) {
+            switch model.phase {
+            case let .result(raw, cleaned):
+                TranscriptCard {
+                    Text(Self.heard(raw: raw, cleaned: cleaned)).foregroundStyle(Theme.secondary)
+                    Text(cleaned).foregroundStyle(Theme.text)
+                }
+            case .listening, .processing:
+                if !model.transcript.isEmpty {
+                    TranscriptCard {
+                        Text(model.transcript)
+                            .foregroundStyle(Theme.text)
+                            .lineLimit(4)
+                            .truncationMode(.head)
+                    }
+                }
+                capsule
+            case .idle:
+                EmptyView()
+            }
+        }
+        .frame(width: 560, height: 220, alignment: .bottom)
+        .environment(\.colorScheme, .dark)
+    }
+
+    /// The words heard, with the ones cleanup removed struck through.
+    static func heard(raw: String, cleaned: String) -> AttributedString {
+        var text = AttributedString()
+        for (index, word) in TranscriptDiff.heard(raw: raw, cleaned: cleaned).enumerated() {
+            if index > 0 { text += AttributedString(" ") }
+            var piece = AttributedString(word.text)
+            if word.removed {
+                piece.strikethroughStyle = .single
+                piece.foregroundColor = Theme.tertiary
+            }
+            text += piece
+        }
+        return text
+    }
+
+    private var capsule: some View {
         HStack(spacing: 10) {
             if model.command {
                 Image(systemName: "wand.and.stars")
@@ -124,7 +187,6 @@ struct PillView: View {
         .padding(.horizontal, 14)
         .frame(width: 230, height: 40)
         .pillSurface()
-        .environment(\.colorScheme, .dark)
     }
 
     private static func elapsed(since start: Date, now: Date) -> String {
@@ -133,7 +195,32 @@ struct PillView: View {
     }
 }
 
+private struct TranscriptCard<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) { content }
+            .font(.system(size: 13))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: 520)
+            .cardSurface()
+            .accessibilityElement(children: .combine)
+    }
+}
+
 private extension View {
+    @ViewBuilder func cardSurface() -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        if #available(macOS 26, *) {
+            glassEffect(.regular.tint(Theme.ground.opacity(0.55)), in: shape)
+        } else {
+            background(Theme.ground.opacity(0.96), in: shape)
+                .overlay(shape.strokeBorder(Theme.seam, lineWidth: 1))
+        }
+    }
+
     /// Liquid Glass where the system has it: the pill floats over other apps, which is what glass is for.
     @ViewBuilder func pillSurface() -> some View {
         if #available(macOS 26, *) {
