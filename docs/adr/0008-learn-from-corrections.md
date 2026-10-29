@@ -32,6 +32,7 @@ The dictionary fixes names and jargon the speech model mishears, but only once t
   - So "May be I" → "Maybe I" is not learned. Neither is a name at the very start of a sentence.
 - **Whole rewrites:** a dictation where more than half the words changed teaches nothing.
 - **Held for review:** a fix that looks like a name but fails a rule above is listed under **Learning** for the user to add or dismiss, with the reason: it was heard as a common word, it starts a sentence, or it looks or sounds only partly alike. Case-only fixes of a common word ("it" → "IT"), grammar fixes, typed-on text and fixes alike in neither spelling nor sound are dropped, as before. Learning also lists what was learned, with a way to take it back out of the dictionary.
+- **New mishearings of a known word:** the engine also rewrites two or three words that sound the same as a term or one of its Heard As spellings (by the same sound key) and are spelled at least 70% like it, so "max studio" becomes **Mac Studio** once "Max Videos" is known. One word never stands in for another single word, since different names sound alike too easily, and matches never cross punctuation.
 - **Where learned words go:** they are added to the dictionary marked **Learned**, or extend an existing word's Heard As. **Learn words from your corrections** in Settings turns this off.
 - **Skipped and private:**
   - Secure fields, edits made in command mode, and fields over 100,000 characters are skipped.

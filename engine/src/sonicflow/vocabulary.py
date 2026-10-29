@@ -7,6 +7,21 @@ from typing import Any
 _SEPARATORS = re.compile(r"[^\w']+")
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z])(?=[A-Z])")
 _SYSTEM_WORDS = Path("/usr/share/dict/words")
+_TOKEN = re.compile(r"[\w']+")
+_SPAN_GAP = re.compile(r"[\s-]+")
+_SOUNDS = {
+    **dict.fromkeys("bp", "p"),
+    **dict.fromkeys("cgkq", "k"),
+    "x": "ks",
+    **dict.fromkeys("dt", "t"),
+    **dict.fromkeys("fv", "f"),
+    **dict.fromkeys("sz", "s"),
+    **dict.fromkeys("mn", "m"),
+    **dict.fromkeys("hwy", ""),
+}
+_MAX_SPAN_WORDS = 3
+_MIN_SOUND_LENGTH = 4
+_MIN_SPELLING = 0.7
 
 
 @cache
@@ -28,6 +43,41 @@ class Term:
 class Snippet:
     trigger: str
     text: str
+
+
+def _letters(phrase: str) -> str:
+    return "".join(c for c in phrase.lower() if c.isalnum())
+
+
+def _sound(letters: str) -> str:
+    """A rough sound-alike key: consonants grouped by how they sound, vowels dropped after the
+    first letter. Matches the app's key for learned corrections."""
+    key = ""
+    for index, letter in enumerate(letters.replace("ph", "f").replace("ck", "k")):
+        codes = ("a" if index == 0 else "") if letter in "aeiou" else _SOUNDS.get(letter, letter)
+        for code in codes:
+            if not key.endswith(code):
+                key += code
+    return key
+
+
+def _similarity(a: str, b: str) -> float:
+    if not a or not b:
+        return 0.0
+    previous = list(range(len(b) + 1))
+    for i, x in enumerate(a):
+        current = [i + 1]
+        for j, y in enumerate(b):
+            current.append(min(previous[j + 1] + 1, current[j] + 1, previous[j] + (x != y)))
+        previous = current
+    return 1 - previous[-1] / max(len(a), len(b))
+
+
+@dataclass(frozen=True)
+class _SoundForm:
+    letters: str
+    words: int
+    term: str
 
 
 def _key(phrase: str) -> str:
@@ -69,6 +119,13 @@ class Vocabulary:
         }
         self._snippets = {key: s.text for s in snippets if (key := _key(s.trigger))}
         self._spelling_pattern = _compile(self._spellings)
+        self._sound_forms: dict[str, list[_SoundForm]] = {}
+        for term in terms:
+            for form in {term.term, *term.heard}:
+                letters = _letters(form)
+                if len(key := _sound(letters)) >= _MIN_SOUND_LENGTH:
+                    entry = _SoundForm(letters, len(_TOKEN.findall(form)), term.term)
+                    self._sound_forms.setdefault(key, []).append(entry)
         self._trigger_pattern = _compile(self._snippets)
 
     @classmethod
@@ -91,7 +148,44 @@ class Vocabulary:
         return cls(tuple(terms), snippets)
 
     def correct(self, text: str) -> str:
-        return self._replace(self._spelling_pattern, self._spellings, text)
+        return self._sound_alike(self._replace(self._spelling_pattern, self._spellings, text))
+
+    def _sound_alike(self, text: str) -> str:
+        """Rewrites words that sound like a term or one of its heard spellings and are spelled
+        close to it, so a new mishearing of a learned name is caught too. One word never stands
+        for another single word: different names sound alike too easily ("Jansen", "Johnson")."""
+        if not self._sound_forms:
+            return text
+        tokens = list(_TOKEN.finditer(text))
+        out: list[str] = []
+        end = 0
+        i = 0
+        while i < len(tokens):
+            for size in range(min(_MAX_SPAN_WORDS, len(tokens) - i), 0, -1):
+                span = tokens[i : i + size]
+                if any(
+                    not _SPAN_GAP.fullmatch(text[a.end() : b.start()])
+                    for a, b in zip(span, span[1:], strict=False)
+                ):
+                    continue
+                phrase = text[span[0].start() : span[-1].end()]
+                if (term := self._sounds_like(phrase, size)) is None:
+                    continue
+                out += [text[end : span[0].start()], term]
+                end = span[-1].end()
+                i += size
+                break
+            else:
+                i += 1
+        return "".join(out) + text[end:]
+
+    def _sounds_like(self, span: str, words: int) -> str | None:
+        letters = _letters(span)
+        for form in self._sound_forms.get(_sound(letters), ()):
+            spelled_alike = _similarity(letters, form.letters) >= _MIN_SPELLING
+            if (words > 1 or form.words > 1) and spelled_alike:
+                return form.term
+        return None
 
     def snippet_for(self, text: str) -> str | None:
         """The snippet when the whole utterance is its trigger."""
