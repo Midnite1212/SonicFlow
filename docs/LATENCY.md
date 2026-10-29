@@ -79,6 +79,18 @@ Transcription and LLM rewrites run during pauses in speech (ADR 0003). Measured 
 
 No item was slower with rolling in both runs. Released right after the last word, only items with a pause inside them gain. With the pause, `long-02` is the slowest, at 280–586 ms, because its correction is still being rewritten when the hotkey comes up. Two items punctuate differently because the reused transcript ends with less silence. `SONICFLOW_ROLLING=0` turns it off.
 
+### Engine on another Mac
+
+The laptop (M3 Pro) dictating to the Mac Studio (M4 Max) over home Wi-Fi with pinned TLS (ADR 0007), parakeet-v2 + qwen3-4b with rolling cleanup on both. The same 21 corpus WAVs were streamed at speaking speed over the dictation WebSocket, timed from `stop` to `final`, on one connection after a warm-up item:
+
+| Engine | Released right after the last word p50 / p95 | 500 ms after p50 / p95 |
+|---|---|---|
+| Laptop, its own engine | 423 / 625 ms | 7 / 158 ms |
+| Studio, from the laptop over Wi-Fi (2 runs) | 163–169 / 204–233 ms | 8–11 / 12–40 ms |
+| Studio, from itself | 165 / 217 ms | 2.5 / 3.0 ms |
+
+Wi-Fi adds about 5 ms at p50 and up to ~40 ms at p95 (ping 6–110 ms), so the Studio over Wi-Fi is about 2.5× faster than the laptop's own engine.
+
 ### Idle penalty
 
 After ~30 s without dictation the first utterance used to cost 360–873 ms end to end (parakeet-v2 + qwen3-1.7b, live WebSocket, 4 idle cycles) against ~260–290 ms back to back. The engine now runs a short ASR and LLM warm-up on `start`, while the user is still speaking; after-idle latency is 257–375 ms, back-to-back unchanged (#14).
