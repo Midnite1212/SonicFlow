@@ -1,6 +1,6 @@
 # 0008 — Learn dictionary words from corrections
 
-**Status:** accepted · 2026-10-29, revised 2026-10-29
+**Status:** accepted · 2026-10-29, revised 2026-10-30
 
 ## Context
 
@@ -31,11 +31,12 @@ The dictionary fixes names and jargon the speech model mishears, but only once t
   - Widening takes in only capitals that aren't there just because they start a sentence, and never "I".
   - So "May be I" → "Maybe I" is not learned. Neither is a name at the very start of a sentence.
 - **Whole rewrites:** a dictation where more than half the words changed teaches nothing.
+- **Held for review:** a fix that looks like a name but fails a rule above is listed under **Learning** for the user to add or dismiss, with the reason: it was heard as a common word, it starts a sentence, or it looks or sounds only partly alike. Case-only fixes of a common word ("it" → "IT"), grammar fixes, typed-on text and fixes alike in neither spelling nor sound are dropped, as before. Learning also lists what was learned, with a way to take it back out of the dictionary.
 - **Where learned words go:** they are added to the dictionary marked **Learned**, or extend an existing word's Heard As. **Learn words from your corrections** in Settings turns this off.
 - **Skipped and private:**
   - Secure fields, edits made in command mode, and fields over 100,000 characters are skipped.
   - The field's text and the replayed keys stay in memory and are never logged or saved.
-  - Only the learned word is saved, in the dictionary.
+  - Only the learned word is saved, in the dictionary. The Learning list holds just the heard and fixed words and is kept like History: in memory unless **Save history** is on, then pruned by its retention.
 
 ## Consequences
 

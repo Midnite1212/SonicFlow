@@ -27,6 +27,7 @@ final class DictationController {
     private(set) var pairedEngine: EngineEndpoint?
     private(set) var activeEngine = EngineEndpoint.local
     private(set) var history = History()
+    private(set) var learning = LearningLog()
     private(set) var stats = Storage.load(UsageStats.self, from: Storage.statsFile) ?? UsageStats()
     let settings = AppSettings()
     let personalization = Personalization()
@@ -74,6 +75,10 @@ final class DictationController {
             history = History(entries: saved.entries)
             history.prune(keeping: settings.historyRetention)
         }
+        if settings.saveHistory, let saved = Storage.load(LearningLog.self, from: Storage.learningFile) {
+            learning = LearningLog(entries: saved.entries)
+            learning.prune(keeping: settings.historyRetention)
+        }
     }
 
     func start() {
@@ -88,7 +93,7 @@ final class DictationController {
                 self?.connectionChanged()
             }
         }
-        corrections.onLearn = { [weak self] words in self?.learn(words) }
+        corrections.onLearn = { [weak self] found in self?.learn(found) }
         audio.onChunk = { [route] chunk in route.withLock { $0 }?.sendAudio(chunk) }
         audio.onLevel = { [weak self] level in
             Task { @MainActor in self?.pill.model.push(level) }
@@ -115,6 +120,7 @@ final class DictationController {
         audio.setInputDevice(uid: settings.inputDeviceUID)
         applyMicrophonePreference()
         persistHistory()
+        persistLearning()
     }
 
     private func persistHistory() {
@@ -124,6 +130,16 @@ final class DictationController {
         }
         history.prune(keeping: settings.historyRetention)
         Storage.save(history, to: Storage.historyFile)
+    }
+
+    /// The learning log is kept like history, so what was misheard never outlives it.
+    private func persistLearning() {
+        guard settings.saveHistory else {
+            Storage.remove(Storage.learningFile)
+            return
+        }
+        learning.prune(keeping: settings.historyRetention)
+        Storage.save(learning, to: Storage.learningFile)
     }
 
     private func applyMicrophonePreference() {
@@ -376,12 +392,36 @@ final class DictationController {
         }
     }
 
-    private func learn(_ words: [LearnedWord]) {
+    private func learn(_ found: [Correction]) {
         guard settings.learnFromCorrections else { return }
+        learning.record(found)
+        persistLearning()
+        let words = found.filter { $0.hold == nil }.map(\.word)
         let terms = DictionaryTerm.adding(words, to: personalization.terms)
-        guard terms != personalization.terms else { return }
-        personalization.terms = terms
-        Log.event("learned \(words.count) dictionary \(words.count == 1 ? "word" : "words") from corrections")
+        if terms != personalization.terms { personalization.terms = terms }
+        Log.event("corrections: \(words.count) learned, \(found.count - words.count) to review")
+    }
+
+    func addToDictionary(_ entry: LearningLog.Entry) {
+        personalization.terms = DictionaryTerm.adding([entry.word], to: personalization.terms)
+        learning.set(entry.id, to: .learned)
+        persistLearning()
+    }
+
+    func removeFromDictionary(_ entry: LearningLog.Entry) {
+        personalization.terms = DictionaryTerm.removing(entry.word, from: personalization.terms)
+        learning.set(entry.id, to: .dismissed)
+        persistLearning()
+    }
+
+    func dismiss(_ entry: LearningLog.Entry) {
+        learning.set(entry.id, to: .dismissed)
+        persistLearning()
+    }
+
+    func clearLearning() {
+        learning.clear()
+        persistLearning()
     }
 
     func copyFromHistory(_ entry: History.Entry) {

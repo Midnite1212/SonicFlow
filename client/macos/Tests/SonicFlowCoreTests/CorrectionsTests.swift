@@ -9,10 +9,14 @@ private let common: Set = ["deploy", "he", "hi", "left", "works", "the", "cube",
                            "are", "i", "home", "code", "is", "mac", "studio", "engine", "runs", "on", "today", "try", "smith", "fast", "said", "send", "now", "ask", "about", "thanks",
                            "may", "be", "maybe", "go", "video", "up", "ping", "next", "week", "open", "config",
                            "deploy", "he", "hi", "left", "works",
-                           "that", "was", "fine", "dog", "ran", "then", "slept"]
+                           "that", "was", "fine", "dog", "ran", "then", "slept", "team"]
 
 private func learn(_ pasted: String, _ edited: String) -> [LearnedWord] {
     Corrections.learn(pasted: pasted, edited: edited) { common.contains($0) }
+}
+
+private func held(_ pasted: String, _ edited: String) -> [Correction] {
+    Corrections.find(pasted: pasted, edited: edited) { common.contains($0) }.filter { $0.hold != nil }
 }
 
 @Test func learnsAMisheardTermWithWhatWasHeard() {
@@ -152,4 +156,41 @@ private func learn(_ pasted: String, _ edited: String) -> [LearnedWord] {
     let terms = try JSONDecoder().decode([DictionaryTerm].self, from: Data(saved.utf8))
     #expect(terms.first?.term == "SonicFlow")
     #expect(terms.first?.learned == false)
+}
+
+@Test func uncertainFixesAreHeldForReview() {
+    #expect(held("Mac Stoo videos is fast.", "Mac Studio is fast.")
+        == [Correction(word: LearnedWord(term: "Mac Studio", heard: "Mac Stoo videos"), hold: .sentenceStart)])
+    #expect(held("Try quen three today.", "Try Qwen3 today.")
+        == [Correction(word: LearnedWord(term: "Qwen3", heard: "quen three"), hold: .unlike)])
+    #expect(held("Ask team about it.", "Ask Tim about it.")
+        == [Correction(word: LearnedWord(term: "Tim", heard: "team"), hold: .commonWord)])
+}
+
+@Test func learnedFixesAreNotHeld() {
+    #expect(held("Deploy the cube ernetes cluster.", "Deploy the Kubernetes cluster.").isEmpty)
+}
+
+@Test func nothingUnsafeOrUnlikeIsHeldForReview() {
+    #expect(held("Did it work?", "Did IT work?").isEmpty)
+    #expect(held("We were ready.", "We're ready.").isEmpty)
+    #expect(held("The meeting are done.", "The meetings are done.").isEmpty)
+    #expect(held("Ask Chris about it.", "Ask Gus about it.").isEmpty)
+    #expect(held("I met Bob Smith today.", "I met Alice Jones today.").isEmpty)
+    #expect(held("open the config", "open the config.yaml").isEmpty)
+    #expect(held("Ping Bartholomew next week.", "Ping Bartholomew Monday.").isEmpty)
+    #expect(held("The stoo video is up.", "The Studio video is up.").isEmpty)
+}
+
+@Test func removingALearnedWordTakesBackOnlyWhatWasLearned() {
+    let terms = [
+        DictionaryTerm(term: "Kubernetes", heardAs: "cooper netties, cube ernetes"),
+        DictionaryTerm(term: "Richie", heardAs: "rich e", learned: true),
+        DictionaryTerm(term: "GitHub", learned: true),
+    ]
+    var after = DictionaryTerm.removing(LearnedWord(term: "Kubernetes", heard: "Cube Ernetes"), from: terms)
+    #expect(after[0].heardAs == "cooper netties")
+    after = DictionaryTerm.removing(LearnedWord(term: "Richie", heard: "rich e"), from: after)
+    after = DictionaryTerm.removing(LearnedWord(term: "GitHub", heard: nil), from: after)
+    #expect(after.map(\.term) == ["Kubernetes"])
 }

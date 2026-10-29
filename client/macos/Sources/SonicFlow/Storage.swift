@@ -4,6 +4,7 @@ import Foundation
 enum Storage {
     static let historyFile = "history.json"
     static let statsFile = "stats.json"
+    static let learningFile = "learning.json"
 
     static let directory = FileManager.default.homeDirectoryForCurrentUser
         .appending(path: "Library/Application Support/SonicFlow")

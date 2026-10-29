@@ -12,6 +12,27 @@ public struct LearnedWord: Equatable, Sendable {
     }
 }
 
+/// A fix found in pasted text: learned straight away, or held back for the user to review.
+public struct Correction: Equatable, Sendable {
+    public enum Hold: String, Codable, Sendable {
+        /// What was heard is a common word, which the dictionary would rewrite everywhere.
+        case commonWord
+        /// The name starts a sentence, so its capital may only mark the sentence.
+        case sentenceStart
+        /// It looks and sounds only partly like what was heard.
+        case unlike
+    }
+
+    public let word: LearnedWord
+    /// Why it wasn't learned on its own; `nil` once it was.
+    public let hold: Hold?
+
+    public init(word: LearnedWord, hold: Hold?) {
+        self.word = word
+        self.hold = hold
+    }
+}
+
 /// Where a paste landed in a text field, so its text can be found again after the user edits it.
 public struct PastedRegion: Equatable, Sendable {
     public let prefix: String
@@ -65,27 +86,51 @@ public enum Corrections {
     public static func learn(
         pasted: String, edited: String, isCommonWord: (String) -> Bool
     ) -> [LearnedWord] {
+        find(pasted: pasted, edited: edited, isCommonWord: isCommonWord).filter { $0.hold == nil }.map(\.word)
+    }
+
+    /// Every fix that looks like a misheard name, including the ones held back from learning.
+    public static func find(
+        pasted: String, edited: String, isCommonWord: (String) -> Bool
+    ) -> [Correction] {
         let old = words(pasted)
         let new = words(edited)
         let hunks = changes(from: old.map(\.text), to: new.map(\.text))
         let changed = hunks.reduce(0) { $0 + $1.old.count }
         guard changed <= max(maxWords, old.count / 2) else { return [] }
-        return hunks.compactMap { learned(from: $0, old: old, new: new, isCommonWord: isCommonWord) }
+        return hunks.compactMap { correction(from: $0, old: old, new: new, isCommonWord: isCommonWord) }
     }
 
-    private static func learned(
+    private static func correction(
         from hunk: Hunk, old: [Word], new: [Word], isCommonWord: (String) -> Bool
-    ) -> LearnedWord? {
-        // A single common word heard ("it", "were", "meeting") would be rewritten everywhere.
-        guard (1...maxWords).contains(hunk.old.count), (1...maxWords).contains(hunk.new.count),
-            !(hunk.old.count == 1 && isCommonWord(old[hunk.old.lowerBound].text.lowercased()))
-        else { return nil }
+    ) -> Correction? {
+        guard (1...maxWords).contains(hunk.old.count), (1...maxWords).contains(hunk.new.count) else { return nil }
         let fix = (heard: old[hunk.old].map(\.text), term: new[hunk.new].map(\.text))
-        if isName(fix, isCommonWord: isCommonWord) { return candidate(fix) }
-        guard let name = widenedToName(hunk, old: old, new: new, isCommonWord: isCommonWord),
-            isName(name, isCommonWord: isCommonWord)
-        else { return nil }
-        return candidate(name)
+        let name: Phrase
+        var startsSentence = false
+        if isName(fix, isCommonWord: isCommonWord) {
+            name = fix
+        } else if let widened = widenedToName(hunk, old: old, new: new, isCommonWord: isCommonWord),
+            isName(widened, isCommonWord: isCommonWord)
+        {
+            name = widened
+        } else if let widened = widenedToName(
+            hunk, old: old, new: new, isCommonWord: isCommonWord, acrossSentenceStarts: true),
+            isName(widened, isCommonWord: isCommonWord)
+        {
+            name = widened
+            startsSentence = true
+        } else {
+            return nil
+        }
+        guard let (word, trusted) = candidate(name) else { return nil }
+        // A single common word heard ("it", "team") would be rewritten everywhere; only a new
+        // spelling of it is worth asking about, never a new case ("it" → "IT").
+        let heardCommon = hunk.old.count == 1 && isCommonWord(fix.heard[0].lowercased())
+        if heardCommon, word.heard == nil { return nil }
+        let hold: Correction.Hold? =
+            heardCommon ? .commonWord : startsSentence ? .sentenceStart : trusted ? nil : .unlike
+        return Correction(word: word, hold: hold)
     }
 
     private static func isName(_ words: Phrase, isCommonWord: (String) -> Bool) -> Bool {
@@ -93,19 +138,20 @@ public enum Corrections {
         return looksLikeVocabulary(words.term, capitalsCount: !caseOnly, isCommonWord: isCommonWord)
     }
 
-    private static func candidate(_ words: Phrase) -> LearnedWord? {
+    /// The fix when it looks or sounds alike enough to review, and whether it is alike enough to
+    /// trust without asking.
+    private static func candidate(_ words: Phrase) -> (word: LearnedWord, trusted: Bool)? {
         let term = words.term.joined(separator: " ")
         let heard = words.heard.joined(separator: " ")
         let caseOnly = heard.lowercased() == term.lowercased()
-        // Sound keys collide, between short words ("the team" and "Tim") and between names
-        // ("Jonathan" and "Johnson"), so sound counts only for phrases misheard as other words
-        // ("Max Videos"), with long enough keys and spellings somewhat alike.
         let spelling = similarity(letters(heard), letters(term))
         let (heardSound, termSound) = (sound(heard), sound(term))
-        let sounding =
-            max(words.heard.count, words.term.count) > 1 && spelling >= minSpellingForSound
-                && min(heardSound.count, termSound.count) >= minSoundLength
-            ? similarity(heardSound, termSound) : 0
+        let sounding = spelling >= minSpellingForSound ? similarity(heardSound, termSound) : 0
+        // Sound keys collide, between short words ("the team" and "Tim") and between names
+        // ("Jonathan" and "Johnson"), so sound is trusted only for phrases misheard as other words
+        // ("Max Videos"), with long enough keys.
+        let soundTrusted =
+            max(words.heard.count, words.term.count) > 1 && min(heardSound.count, termSound.count) >= minSoundLength
         // An apostrophe left after dropping possessives marks a grammar fix ("we're"), not a name;
         // text typed straight after a word ("config" → "config.yaml") is not a fix of it.
         guard (2...maxLength).contains(term.count),
@@ -113,17 +159,22 @@ public enum Corrections {
             !(term.count > heard.count && term.lowercased().hasPrefix(heard.lowercased())),
             max(spelling, sounding) >= minSimilarity
         else { return nil }
-        return LearnedWord(term: term, heard: caseOnly ? nil : heard)
+        return (
+            LearnedWord(term: term, heard: caseOnly ? nil : heard),
+            max(spelling, soundTrusted ? sounding : 0) >= minSimilarity
+        )
     }
 
     /// Widens a fix that isn't a name on its own to the unchanged capitalized words beside it, so
-    /// "Stoo videos" → "Studio" after "Mac" is learned as "Mac Studio". Capitals that only start a
-    /// sentence, and "I", don't make a name.
+    /// "Stoo videos" → "Studio" after "Mac" is learned as "Mac Studio". "I" never makes a name,
+    /// and neither do capitals that may only start a sentence, unless `acrossSentenceStarts`.
     private static func widenedToName(
-        _ hunk: Hunk, old: [Word], new: [Word], isCommonWord: (String) -> Bool
+        _ hunk: Hunk, old: [Word], new: [Word], isCommonWord: (String) -> Bool, acrossSentenceStarts: Bool = false
     ) -> Phrase? {
         func partOfName(_ word: Word) -> Bool {
-            word.capitalized && word.text != "I" && !(word.sentenceStart && isCommonWord(word.text.lowercased()))
+            guard word.capitalized, word.text != "I" else { return false }
+            guard word.sentenceStart, isCommonWord(word.text.lowercased()) else { return true }
+            return acrossSentenceStarts && !functionWords.contains(word.text.lowercased())
         }
         guard new[hunk.new].contains(where: { $0.capitalized && !$0.sentenceStart }) else { return nil }
         var oldRange = hunk.old
@@ -161,6 +212,13 @@ public enum Corrections {
 
         var capitalized: Bool { text.first?.isUppercase == true }
     }
+
+    /// Words that start sentences but never names.
+    private static let functionWords: Set = [
+        "a", "an", "and", "as", "at", "but", "for", "he", "her", "his", "if", "in", "it", "its", "my", "of", "on",
+        "or", "our", "she", "so", "that", "the", "their", "then", "these", "they", "this", "those", "to", "we",
+        "when", "with", "you", "your",
+    ]
 
     private static let closers = CharacterSet(charactersIn: "\"')]}\u{201D}\u{2019}")
 
@@ -277,6 +335,21 @@ extension DictionaryTerm {
             else { continue }
             terms[index].heardAs = (terms[index].heard + [heard]).joined(separator: ", ")
         }
+        return terms
+    }
+
+    /// `terms` with `word` taken back out: its Heard As spelling dropped, and the term too once a
+    /// learned term has no spellings left.
+    public static func removing(_ word: LearnedWord, from terms: [DictionaryTerm]) -> [DictionaryTerm] {
+        var terms = terms
+        guard let index = terms.firstIndex(where: { $0.term.trimmingCharacters(in: .whitespaces) == word.term })
+        else { return terms }
+        if let heard = word.heard {
+            terms[index].heardAs = terms[index].heard
+                .filter { $0.caseInsensitiveCompare(heard) != .orderedSame }
+                .joined(separator: ", ")
+        }
+        if terms[index].learned, terms[index].heard.isEmpty { terms.remove(at: index) }
         return terms
     }
 }
