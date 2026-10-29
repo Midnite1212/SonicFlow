@@ -3,10 +3,11 @@
 ## v0 — Fast core (English, localhost)
 
 - [x] v0.0 Groundwork: protocol, backend interfaces, server, bench harness, corpus
-- [ ] v0.1 ASR bake-off: add candidates one at a time, bench on M3 Pro and M4 Max, pick a default
+- [x] v0.1 ASR bake-off: add candidates one at a time, bench on M3 Pro and M4 Max, pick a default
   - [x] Parakeet TDT v2 and v3 (#3) — v2 leads on M3 Pro: ~110 ms p50, 7.1% WER
   - [x] Whisper large-v3-turbo (#7) — ~600 ms p50, 8.8% WER; too slow for the v0 default, kept as the multilingual candidate
-- [ ] v0.2 Cleanup bake-off: rule-based fast path, then local LLMs, measured on filler/correction items
+  - [x] M4 Max bench (#5) — 2.6–3× faster than the M3 Pro at every combination, same WER; parakeet-v2 stays the default
+- [x] v0.2 Cleanup bake-off: rule-based fast path, then local LLMs, measured on filler/correction items
   - [x] Rule-based cleanup and LLM router (#9) — ~0 ms, clean-text WER 15.8% → 12.0%; routes only the 4 correction/ambiguous items
   - [x] Local LLM cleanup (#10) — qwen3-1.7b default (~150 ms per rewrite, 5.7% clean WER); qwen3-4b for quality (~300 ms, 5.1%)
   - [x] Prompt v2 and hallucination guard (#23) — qwen3-4b now default: every corpus item correct, 3.4% clean WER
@@ -38,7 +39,7 @@
 - [x] Personal dictionary and snippets / voice shortcuts (#44)
 - [x] Per-app styles: standard, casual, lowercase (#46)
 - [x] Command mode: select text, hold the hotkey with Shift, speak an edit (#48)
-- History with re-paste
+- [x] History with re-paste (#42, #64)
 - Cloud-hosted engine on a GPU host (ADR 0004)
 
 ## v2 — Ideas
