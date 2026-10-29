@@ -71,3 +71,12 @@ def test_plan_bare_correction_takes_the_replacement_after_it():
         ("The bug is in the parser. Scratch that. The lexer.", True),
         ("Tests pass.", False),
     ]
+
+
+def test_plan_rewrites_each_flagged_sentence_on_its_own():
+    text = "It was like fast. Ship it Friday, no wait, Thursday. Done."
+    assert plan_rewrites(text) == [
+        ("It was like fast.", True),
+        ("Ship it Friday, no wait, Thursday.", True),
+        ("Done.", False),
+    ]

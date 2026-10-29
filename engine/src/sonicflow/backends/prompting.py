@@ -1,4 +1,5 @@
 import re
+import threading
 from abc import abstractmethod
 
 from sonicflow.backends.base import CleanupBackend, CleanupContext
@@ -85,16 +86,42 @@ def edit_messages(selection: str, instruction: str) -> list[dict[str, str]]:
     ]
 
 
+class Interrupted(Exception):
+    """A rewrite stopped part way because release needs the inference thread."""
+
+
 class PromptCleanup(CleanupBackend):
     """Cleanup by a chat model: only sentences that need it are rewritten, and a rewrite that
     adds words is thrown away. Subclasses supply the model call."""
 
+    # Whether `_rewrite` can stop between tokens; only then may it run ahead of release.
+    interruptible = False
+
     @abstractmethod
-    def _rewrite(self, text: str) -> str: ...
+    def _rewrite(self, text: str, cancelled: threading.Event | None = None) -> str: ...
 
     def clean(self, text: str, context: CleanupContext) -> str:
-        parts = []
+        return " ".join(
+            self._settle(span, context) if flagged else span
+            for span, flagged in plan_rewrites(apply_rules(text))
+        )
+
+    def prepare(self, text: str, context: CleanupContext, cancelled: threading.Event) -> None:
+        if not self.interruptible:
+            return
         for span, flagged in plan_rewrites(apply_rules(text)):
-            rewrite = self._rewrite(span) if flagged else span
-            parts.append(rewrite if flagged and accept_rewrite(span, rewrite) else span)
-        return " ".join(parts)
+            if cancelled.is_set():
+                return
+            if flagged and span not in context.rewrites:
+                try:
+                    self._settle(span, context, cancelled)
+                except Interrupted:
+                    return
+
+    def _settle(
+        self, span: str, context: CleanupContext, cancelled: threading.Event | None = None
+    ) -> str:
+        if (settled := context.rewrites.get(span)) is None:
+            rewrite = self._rewrite(span, cancelled)
+            settled = context.rewrites[span] = rewrite if accept_rewrite(span, rewrite) else span
+        return settled

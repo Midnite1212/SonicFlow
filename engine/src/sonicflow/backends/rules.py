@@ -36,9 +36,10 @@ def needs_llm(text: str) -> bool:
 def plan_rewrites(text: str) -> list[tuple[str, bool]]:
     """Splits text into consecutive spans, flagging the ones the LLM must rewrite.
 
-    Only flagged sentences pay for the LLM. A sentence that opens with a correction ("No wait,
-    Thursday.") retracts something in the sentence before it, so the two travel together; a bare
-    "Scratch that." also takes the sentence after it, which holds the replacement.
+    Only flagged sentences pay for the LLM, one rewrite each. A sentence that opens with a
+    correction ("No wait, Thursday.") retracts something in the sentence before it, so the two
+    travel together; a bare "Scratch that." also takes the sentence after it, which holds the
+    replacement.
     """
     units: list[tuple[str, bool]] = []
     awaiting_replacement = False
@@ -55,9 +56,10 @@ def plan_rewrites(text: str) -> list[tuple[str, bool]]:
         # "Scratch that." on its own: the replacement is in the next sentence.
         awaiting_replacement = bool(correction) and not sentence[correction.end() :].strip(" ,.!?")
 
+    # Flagged units stay apart so each rewrite is reusable while the transcript grows.
     spans: list[tuple[str, bool]] = []
     for unit, flagged in units:
-        if spans and spans[-1][1] == flagged:
+        if spans and not flagged and not spans[-1][1]:
             previous, _ = spans.pop()
             unit = f"{previous} {unit}"
         spans.append((unit, flagged))

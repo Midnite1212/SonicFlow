@@ -5,6 +5,7 @@ import re
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -13,7 +14,7 @@ import jiwer
 import numpy as np
 import soundfile as sf
 
-from sonicflow import SAMPLE_RATE
+from sonicflow import SAMPLE_RATE, rolling
 from sonicflow.backends.base import ASRBackend, CleanupBackend, CleanupContext
 from sonicflow.backends.registry import create_asr, create_cleanup
 
@@ -104,22 +105,42 @@ def run_item(
     cleanup: CleanupBackend,
     chunk_samples: int,
     realtime: bool,
+    inference: ThreadPoolExecutor,
+    pause_s: float = 0.0,
+    use_rolling: bool = False,
 ) -> ItemResult:
+    """Runs one utterance the way the server does: every model call on the one `inference`
+    thread, and with `use_rolling` the pause work queued there while audio keeps arriving."""
     audio = read_audio(item.audio_path)
-    stream = asr.stream()
+    # The user still holding the hotkey after the last word.
+    audio = np.concatenate([audio, np.zeros(round(pause_s * SAMPLE_RATE), dtype=np.float32)])
+    context = CleanupContext()
+    stream = inference.submit(asr.stream).result()
+    speech = (
+        rolling.Rolling(asr, cleanup, context, lambda text: text, inference.submit)
+        if use_rolling
+        else None
+    )
     feed_s = 0.0
     for offset in range(0, len(audio), chunk_samples):
         chunk = audio[offset : offset + chunk_samples]
         started = time.perf_counter()
-        stream.feed(chunk)
+        if speech is not None:
+            speech.add(chunk)
+        else:
+            inference.submit(stream.feed, chunk).result()
         feed_s += time.perf_counter() - started
         if realtime:
             time.sleep(max(0.0, len(chunk) / SAMPLE_RATE - (time.perf_counter() - started)))
 
     finalize_start = time.perf_counter()
-    raw = stream.finalize()
+    if speech is not None:
+        speech.release()
+        raw = inference.submit(speech.transcript).result()
+    else:
+        raw = inference.submit(stream.finalize).result()
     cleanup_start = time.perf_counter()
-    text = cleanup.clean(raw, CleanupContext())
+    text = inference.submit(cleanup.clean, raw, context).result()
     done = time.perf_counter()
 
     return ItemResult(
@@ -190,6 +211,12 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=REPO_ROOT / "bench" / "results")
     parser.add_argument("--chunk-ms", type=int, default=100)
     parser.add_argument("--realtime", action="store_true", help="pace audio feed at speaking speed")
+    parser.add_argument(
+        "--pause-ms",
+        type=int,
+        default=0,
+        help="silence after the last word before release, as when the hotkey is held a moment",
+    )
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--max-regression", type=float, default=0.10)
     args = parser.parse_args()
@@ -198,14 +225,30 @@ def main() -> None:
     asr = create_asr(args.asr)
     cleanup = create_cleanup(args.cleanup)
 
-    load_start = time.perf_counter()
-    asr.load()
-    cleanup.load()
-    load_ms = round((time.perf_counter() - load_start) * 1000, 1)
+    # MLX models run on the thread that loaded them, so as in the server everything runs on one.
+    with ThreadPoolExecutor(max_workers=1) as inference:
+        load_start = time.perf_counter()
+        inference.submit(asr.load).result()
+        inference.submit(cleanup.load).result()
+        load_ms = round((time.perf_counter() - load_start) * 1000, 1)
 
-    chunk_samples = SAMPLE_RATE * args.chunk_ms // 1000
-    run_item(items[0], asr, cleanup, chunk_samples, realtime=False)
-    results = [run_item(item, asr, cleanup, chunk_samples, args.realtime) for item in items]
+        chunk_samples = SAMPLE_RATE * args.chunk_ms // 1000
+        run_item(items[0], asr, cleanup, chunk_samples, False, inference)
+        # Rolling work happens during speech, so it only means something when audio arrives in time.
+        uses_rolling = args.realtime and asr.rolling and rolling.enabled()
+        results = [
+            run_item(
+                item,
+                asr,
+                cleanup,
+                chunk_samples,
+                args.realtime,
+                inference,
+                args.pause_ms / 1000,
+                uses_rolling,
+            )
+            for item in items
+        ]
     summary = summarize(items, results, load_ms)
 
     for result in results:
@@ -224,6 +267,8 @@ def main() -> None:
                 "cleanup": args.cleanup,
                 "machine": machine_name(),
                 "realtime": args.realtime,
+                "rolling": uses_rolling,
+                "pause_ms": args.pause_ms,
                 "chunk_ms": args.chunk_ms,
                 "summary": summary,
                 "items": [asdict(r) for r in results],

@@ -68,6 +68,17 @@ Ranges span two runs with warm models; load is ~1.2 s once cached. The v2/v3 gap
 
 LLM cleanup only runs on the 4 items `needs_llm()` flags, so its cost shows at p95: per rewrite, qwen3-1.7b takes 129–173 ms and qwen3-4b 230–353 ms on top of ASR. Both resolve all three self-corrections; only 4B also drops the ambiguous "like". Both drop a leading "Let's" in "Let's ship it on Friday, no wait, Thursday".
 
+### Rolling cleanup
+
+Transcription and LLM rewrites run during pauses in speech (ADR 0003). Measured on the M3 Pro with parakeet-v2 + qwen3-4b, audio fed at speaking speed (`--realtime`), two runs each. The second row adds half a second of silence before release (`--pause-ms 500`), as when the hotkey is held a moment after the last word:
+
+| Release | Rolling off p50 / p95 | Rolling on p50 / p95 | WER clean |
+|---|---|---|---|
+| Right after the last word | 429–480 / 758–1,033 ms | 362–391 / 618–625 ms | 0.8% both |
+| 500 ms after the last word | 394–464 / 616–805 ms | 29–51 / 191–226 ms | 0.8% both |
+
+No item was slower with rolling in both runs. Released right after the last word, only items with a pause inside them gain. With the pause, `long-02` is the slowest, at 280–586 ms, because its correction is still being rewritten when the hotkey comes up. Two items punctuate differently because the reused transcript ends with less silence. `SONICFLOW_ROLLING=0` turns it off.
+
 ### Idle penalty
 
 After ~30 s without dictation the first utterance used to cost 360–873 ms end to end (parakeet-v2 + qwen3-1.7b, live WebSocket, 4 idle cycles) against ~260–290 ms back to back. The engine now runs a short ASR and LLM warm-up on `start`, while the user is still speaking; after-idle latency is 257–375 ms, back-to-back unchanged (#14).
