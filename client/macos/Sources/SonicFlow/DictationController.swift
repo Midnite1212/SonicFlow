@@ -151,6 +151,8 @@ final class DictationController {
         let monitor = HotkeyMonitor(hotkey: settings.hotkey) { [weak self] input in
             Task { @MainActor in self?.handle(input) }
         }
+        // The tap runs on the main run loop, so edits reach the watcher in the order typed.
+        monitor.onEdit = { [weak self] key in MainActor.assumeIsolated { self?.corrections.observe(key) } }
         guard monitor.start() else {
             Log.event("hotkey tap unavailable; waiting for permission")
             return

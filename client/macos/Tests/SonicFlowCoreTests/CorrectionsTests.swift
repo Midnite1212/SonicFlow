@@ -3,10 +3,13 @@ import Testing
 
 @testable import SonicFlowCore
 
-private let common: Set = ["deploy", "the", "cube", "to", "on", "friday", "will", "send", "it", "rich", "e", "met",
+private let common: Set = ["deploy", "he", "hi", "left", "works", "the", "cube", "to", "on", "friday", "will", "send", "it", "rich", "e", "met",
                            "with", "bob", "alice", "sonic", "flow", "uses", "and", "review", "please", "a",
                            "were", "its", "meeting", "walk", "us", "know", "let", "did", "work", "ready", "going",
-                           "are", "i", "home", "code", "is"]
+                           "are", "i", "home", "code", "is", "mac", "studio", "engine", "runs", "on", "today", "try", "smith", "fast", "said", "send", "now", "ask", "about", "thanks",
+                           "may", "be", "maybe", "go", "video", "up", "ping", "next", "week", "open", "config",
+                           "deploy", "he", "hi", "left", "works",
+                           "that", "was", "fine", "dog", "ran", "then", "slept"]
 
 private func learn(_ pasted: String, _ edited: String) -> [LearnedWord] {
     Corrections.learn(pasted: pasted, edited: edited) { common.contains($0) }
@@ -51,8 +54,48 @@ private func learn(_ pasted: String, _ edited: String) -> [LearnedWord] {
     #expect(learn("The code is 4521.", "The code is 4512.").isEmpty)
 }
 
-@Test func spellingsTooUnlikeWhatWasHeardAreNotLearned() {
+@Test func soundAlikeNamesAreLearnedWhole() {
+    #expect(learn("It runs on the Max Videos engine.", "It runs on the Mac Studio's engine.")
+        == [LearnedWord(term: "Mac Studio", heard: "Max Videos")])
+    #expect(learn("It runs on the Mac Stoo videos engine.", "It runs on the Mac Studio engine.")
+        == [LearnedWord(term: "Mac Studio", heard: "Mac Stoo videos")])
+}
+
+@Test func uncertainFixesAreLeftAlone() {
+    // A sentence's first word may be capitalized only because it starts the sentence.
+    #expect(learn("Mac Stoo videos is fast.", "Mac Studio is fast.").isEmpty)
+    // Short sound keys collide too easily to trust.
     #expect(learn("Try quen three today.", "Try Qwen3 today.").isEmpty)
+}
+
+@Test func renamesThatMerelySoundAlikeAreNotLearned() {
+    #expect(learn("send it to the team now", "send it to Tim now").isEmpty)
+    #expect(learn("Ask Chris about it.", "Ask Gus about it.").isEmpty)
+    #expect(learn("Thanks Ian.", "Thanks Anne.").isEmpty)
+    #expect(learn("Ask Jonathan about it.", "Ask Johnson about it.").isEmpty)
+}
+
+@Test func sentenceStartsAndIDoNotMakeANameOfAGrammarFix() {
+    #expect(learn("May be I will go.", "Maybe I will go.").isEmpty)
+    #expect(learn("The stoo video is up.", "The Studio video is up.").isEmpty)
+    #expect(learn("Ping Bartholomew next week.", "Ping Bartholomew Monday.").isEmpty)
+    #expect(learn(#"He said "Hi." Then stoo videos left."#, #"He said "Hi." Then Studio left."#).isEmpty)
+    #expect(learn("It works… Then stoo videos left.", "It works… Then Studio left.").isEmpty)
+}
+
+@Test func textTypedStraightAfterAWordIsNotAFix() {
+    #expect(learn("open the config", "open the config.yaml").isEmpty)
+    #expect(learn("open a PR", "open a PRs").isEmpty)
+    #expect(learn("deploy Kubernetes", "deploy Kubernetes:pw1").isEmpty)
+}
+
+@Test func capitalizingCommonWordsIsNotAName() {
+    #expect(learn("I said that was fine.", "I said That Was fine.").isEmpty)
+    #expect(learn("The dog ran. Then it slept.", "The dog ran. Then It slept.").isEmpty)
+}
+
+@Test func renamingSomeoneIsNotAMishearing() {
+    #expect(learn("I met Bob Smith today.", "I met Alice Jones today.").isEmpty)
 }
 
 @Test func aRewrittenDictationTeachesNothing() {
