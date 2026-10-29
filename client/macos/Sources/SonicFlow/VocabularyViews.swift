@@ -26,7 +26,15 @@ struct DictionaryView: View {
         ) {
             Table(store.terms, selection: $model.terms) {
                 TableColumn("Word") { term in
-                    TextField("Word", text: field(term.id, \.term)).textFieldStyle(.plain)
+                    HStack {
+                        TextField("Word", text: field(term.id, \.term)).textFieldStyle(.plain)
+                        if term.learned {
+                            Text("Learned")
+                                .font(.caption)
+                                .foregroundStyle(Theme.tertiary)
+                                .help("Added from a correction you made after pasting")
+                        }
+                    }
                 }
                 .width(min: 140, ideal: 200, max: 320)
                 TableColumn("Heard As") { term in

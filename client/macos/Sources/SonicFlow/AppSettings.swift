@@ -35,6 +35,10 @@ final class AppSettings {
         didSet { save(historyRetention.rawValue, "historyRetention") }
     }
 
+    var learnFromCorrections: Bool {
+        didSet { save(learnFromCorrections, "learnFromCorrections") }
+    }
+
     /// Measured by the typing test; `nil` until the user takes it.
     var typingWordsPerMinute: Double? {
         didSet { save(typingWordsPerMinute, "typingWordsPerMinute") }
@@ -52,6 +56,7 @@ final class AppSettings {
         saveHistory = defaults.bool(forKey: "saveHistory")
         historyRetention =
             defaults.string(forKey: "historyRetention").flatMap(HistoryRetention.init(rawValue:)) ?? .week
+        learnFromCorrections = defaults.object(forKey: "learnFromCorrections") as? Bool ?? true
         typingWordsPerMinute = defaults.object(forKey: "typingWordsPerMinute") as? Double
         onboarded = defaults.bool(forKey: "onboarded")
     }
