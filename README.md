@@ -45,7 +45,7 @@ uv run sonicflow-service restart
 uv run sonicflow-service uninstall
 ```
 
-`install --asr <name> --cleanup <name>` picks backends (default: the saved choice, else `parakeet-v2` + `qwen3-4b`); the app can also switch them at runtime (`POST /v1/config`). The engine locks the active models' weights in RAM so macOS can't page them out under memory pressure (about 4.7 GB for the defaults); set `SONICFLOW_LOCK_MODELS=0` in its environment to turn that off. Rerun `install` after pulling engine changes. Models must already be in the Hugging Face cache (run the bench or the engine once), since the service runs offline. Logs: `~/Library/Logs/SonicFlow/engine.log`. While the service runs, `uv run sonicflow` can't bind port 8765.
+`install --asr <name> --cleanup <name>` picks backends (default: the saved choice, else `parakeet-v2` + `qwen3-4b`); the app can also switch them at runtime (`POST /v1/config`). The engine locks the active models' weights in RAM so macOS can't page them out under memory pressure (about 4.7 GB for the defaults); set `SONICFLOW_LOCK_MODELS=0` in its environment to turn that off. Ollama cleanup models are reached at `SONICFLOW_OLLAMA_URL` (default `http://127.0.0.1:11434`, also any Ollama-compatible proxy), with a bearer token read from the first line of the file at `SONICFLOW_OLLAMA_TOKEN_FILE` when set; a failed cleanup request leaves the dictated text as spoken. Rerun `install` after pulling engine changes. Models must already be in the Hugging Face cache (run the bench or the engine once), since the service runs offline. Logs: `~/Library/Logs/SonicFlow/engine.log`. While the service runs, `uv run sonicflow` can't bind port 8765.
 
 ## Menu-bar app
 
