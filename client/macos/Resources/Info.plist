@@ -23,6 +23,13 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>SonicFlow listens only while you hold the dictation hotkey, and audio never leaves this Mac.</string>
+    <string>SonicFlow listens only while you hold the dictation hotkey. Audio goes only to the SonicFlow engine on this Mac, or on a Mac you paired it with.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>SonicFlow connects to the SonicFlow engine on a Mac you paired it with.</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
 </dict>
 </plist>

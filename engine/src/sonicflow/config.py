@@ -32,6 +32,7 @@ class Settings:
     cleanup: str
     host: str
     port: int
+    lan_port: int
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -42,4 +43,5 @@ class Settings:
             cleanup=os.environ.get("SONICFLOW_CLEANUP") or saved.get("cleanup", "none"),
             host=os.environ.get("SONICFLOW_HOST", "127.0.0.1"),
             port=int(os.environ.get("SONICFLOW_PORT", "8765")),
+            lan_port=int(os.environ.get("SONICFLOW_LAN_PORT", "8766")),
         )

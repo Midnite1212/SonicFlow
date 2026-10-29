@@ -1,5 +1,6 @@
 import Foundation
 import SonicFlowCore
+import os
 
 /// HTTP calls to the engine's control endpoints, plus restarting its LaunchAgent.
 enum EngineAPI {
@@ -7,8 +8,14 @@ enum EngineAPI {
         let errorDescription: String?
     }
 
-    private static let base = URL(string: "http://127.0.0.1:8765")!
     private static let label = "com.sonicflow.engine"
+    private static let current = OSAllocatedUnfairLock(initialState: EngineEndpoint.local)
+
+    /// The engine dictation uses right now, which models and backend choices apply to.
+    static var endpoint: EngineEndpoint {
+        get { current.withLock { $0 } }
+        set { current.withLock { $0 = newValue } }
+    }
 
     static func backends() async throws -> Backends {
         try await request("v1/backends")
@@ -53,6 +60,24 @@ enum EngineAPI {
         try await request("v1/models/ollama")
     }
 
+    /// Sharing this Mac's engine with the network; always asks the engine on this Mac.
+    static func sharing() async throws -> SharingStatus {
+        try await request("v1/lan", on: .local)
+    }
+
+    static func setSharing(_ enabled: Bool) async throws -> SharingStatus {
+        try await request("v1/lan", method: "POST", body: ["enabled": enabled], on: .local)
+    }
+
+    static func resetSharing() async throws -> SharingStatus {
+        try await request("v1/lan/reset", method: "POST", on: .local)
+    }
+
+    /// Reaches a paired engine with its token and pinned certificate before the pairing is saved.
+    static func check(_ endpoint: EngineEndpoint) async throws {
+        let _: Ignored = try await request("health", on: endpoint, timeout: 5)
+    }
+
     private struct Ignored: Decodable {}
 
     static func restart() throws {
@@ -67,18 +92,23 @@ enum EngineAPI {
     }
 
     private static func request<T: Decodable>(
-        _ path: String, method: String = "GET", body: [String: String]? = nil,
-        query: [URLQueryItem] = []
+        _ path: String, method: String = "GET", body: (any Encodable)? = nil,
+        query: [URLQueryItem] = [], on endpoint: EngineEndpoint? = nil, timeout: TimeInterval = 120
     ) async throws -> T {
-        var url = base.appending(path: path)
+        let endpoint = endpoint ?? self.endpoint
+        var url = endpoint.baseURL.appending(path: path)
         if !query.isEmpty { url.append(queryItems: query) }
-        var request = URLRequest(url: url, timeoutInterval: 120)
+        var request = URLRequest(url: url, timeoutInterval: timeout)
         request.httpMethod = method
+        if let token = endpoint.token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONEncoder().encode(body)
         }
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let trust = endpoint.certificateSHA256.map(PinnedTrust.init(sha256:))
+        let (data, response) = try await URLSession.shared.data(for: request, delegate: trust)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let detail = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"]
             throw Failure(errorDescription: detail ?? "The engine rejected the request.")

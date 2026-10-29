@@ -23,11 +23,12 @@
   - [x] Recent dictations in the menu, memory only, click to copy (#33)
   - [x] App icon (#40)
   - [x] App window with Home, History and Settings; onboarding; opt-in saved history (#42)
-- [ ] v0.5 Engine as a launchd daemon; optional LAN bind so the Mac Studio serves the laptop
+- [x] v0.5 Engine as a launchd daemon; optional LAN bind so the Mac Studio serves the laptop
   - [x] LaunchAgent with `sonicflow-service`, engine deployed to Application Support (#17)
   - [x] Switch models at runtime, choice saved in config.json (#25)
   - [x] One-step `scripts/install.sh` (#35)
   - [x] Model weights locked in RAM so memory pressure can't slow the next dictation (#30, ADR 0006)
+  - [x] Share the engine with other Macs: pairing code, pinned TLS, fallback to this Mac (#76, ADR 0007)
 - [x] v0.8c Models pane: Recommended, Browse, My Models (#56)
 - [x] v0.8b Ollama cleanup models and Hugging Face search (#54)
 - [x] v0.8a Model library: catalogue, explicit downloads, your own models (#52)

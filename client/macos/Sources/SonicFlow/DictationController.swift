@@ -1,6 +1,7 @@
 import AppKit
 import Observation
 import SonicFlowCore
+import os
 
 enum DictationState {
     case offline, idle, listening, processing
@@ -22,6 +23,9 @@ final class DictationController {
     private(set) var lastLatencyMs: Double?
     private(set) var permissions = Permissions.current()
     private(set) var hotkeyActive = false
+    /// Another Mac's engine, used whenever it is reachable.
+    private(set) var pairedEngine: EngineEndpoint?
+    private(set) var activeEngine = EngineEndpoint.local
     private(set) var history = History()
     private(set) var stats = Storage.load(UsageStats.self, from: Storage.statsFile) ?? UsageStats()
     let settings = AppSettings()
@@ -45,12 +49,15 @@ final class DictationController {
     @ObservationIgnored private var gesture: TalkGesture = HoldToTalk()
     @ObservationIgnored private var gestureMode = TalkMode.hold
     @ObservationIgnored private let audio = AudioCapture()
-    @ObservationIgnored private let engine = EngineClient(
-        url: URL(string: "ws://127.0.0.1:8765/v1/dictate")!
-    )
+    @ObservationIgnored private let localEngine = EngineClient(endpoint: .local)
+    @ObservationIgnored private var remoteEngine: EngineClient?
+    @ObservationIgnored private var localConnected = false
+    @ObservationIgnored private var remoteConnected = false
+    @ObservationIgnored private var engine: EngineClient
+    /// The engine the current dictation streams to; read on the audio thread.
+    @ObservationIgnored private let route = OSAllocatedUnfairLock<EngineClient?>(uncheckedState: nil)
     @ObservationIgnored private let pill = PillController()
     @ObservationIgnored private var hotkey: HotkeyMonitor?
-    @ObservationIgnored private var connected = false
     @ObservationIgnored private var commandRequested = false
     @ObservationIgnored private var selection: Task<String?, Never>?
     @ObservationIgnored private var startedAt: TimeInterval = 0
@@ -58,7 +65,10 @@ final class DictationController {
     @ObservationIgnored private var permissionTimer: Timer?
     @ObservationIgnored private var pasteShortcut: PasteShortcut?
 
+    private var connected: Bool { localConnected || remoteConnected }
+
     init() {
+        engine = localEngine
         if settings.saveHistory, let saved = Storage.load(History.self, from: Storage.historyFile) {
             history = History(entries: saved.entries)
             history.prune(keeping: settings.historyRetention)
@@ -71,14 +81,18 @@ final class DictationController {
             Task { @MainActor in self?.pasteLast() }
         }
 
-        engine.onConnectionChange = { [weak self] isConnected in
-            Task { @MainActor in self?.connectionChanged(isConnected) }
+        localEngine.onConnectionChange = { [weak self] isConnected in
+            Task { @MainActor in
+                self?.localConnected = isConnected
+                self?.connectionChanged()
+            }
         }
-        audio.onChunk = { [engine] chunk in engine.sendAudio(chunk) }
+        audio.onChunk = { [route] chunk in route.withLock { $0 }?.sendAudio(chunk) }
         audio.onLevel = { [weak self] level in
             Task { @MainActor in self?.pill.model.push(level) }
         }
-        engine.connect()
+        localEngine.connect()
+        if let paired = PairingStore.load() { connect(to: paired) }
         settings.onChange = { [weak self] in self?.applySettings() }
         applySettings()
         installHotkey()
@@ -144,12 +158,55 @@ final class DictationController {
         Log.event("hotkey tap installed")
     }
 
-    private func connectionChanged(_ isConnected: Bool) {
-        Log.event("engine \(isConnected ? "connected" : "disconnected")")
-        connected = isConnected
+    private func connectionChanged() {
+        let paired = pairedEngine == nil ? "" : ", paired Mac \(remoteConnected ? "up" : "down")"
+        Log.event("engine on this Mac \(localConnected ? "up" : "down")\(paired)")
+        activeEngine = remoteConnected ? pairedEngine ?? .local : .local
+        EngineAPI.endpoint = activeEngine
         if state == .idle || state == .offline {
-            state = isConnected ? .idle : .offline
+            state = connected ? .idle : .offline
         }
+    }
+
+    /// Checks that the code reaches its engine before keeping it.
+    func pair(code: String) async throws {
+        guard let endpoint = EngineEndpoint(pairingCode: code) else {
+            throw EngineAPI.Failure(errorDescription: "That isn't a SonicFlow pairing code.")
+        }
+        do {
+            try await EngineAPI.check(endpoint)
+        } catch {
+            throw EngineAPI.Failure(
+                errorDescription: "Couldn't reach \(endpoint.displayName): \(error.localizedDescription)"
+            )
+        }
+        try PairingStore.save(code)
+        connect(to: endpoint)
+    }
+
+    func unpair() {
+        PairingStore.remove()
+        connect(to: nil)
+    }
+
+    private func connect(to endpoint: EngineEndpoint?) {
+        remoteEngine?.close()
+        remoteEngine = nil
+        remoteConnected = false
+        pairedEngine = endpoint
+        if let endpoint {
+            let client = EngineClient(endpoint: endpoint)
+            client.onConnectionChange = { [weak self, weak client] isConnected in
+                Task { @MainActor in
+                    guard let self, let client, self.remoteEngine === client else { return }
+                    self.remoteConnected = isConnected
+                    self.connectionChanged()
+                }
+            }
+            remoteEngine = client
+            client.connect()
+        }
+        connectionChanged()
     }
 
     private func handle(_ input: HotkeyMonitor.Input) {
@@ -190,6 +247,8 @@ final class DictationController {
             return
         }
         let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        engine = remoteConnected ? remoteEngine ?? localEngine : localEngine
+        route.withLock { [engine] in $0 = engine }
         engine.begin(personalization.startMessage(app: app))
         let micStart = ProcessInfo.processInfo.systemUptime
         do {

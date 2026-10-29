@@ -35,7 +35,7 @@ struct HomeView: View {
         }
         .paneBackground()
         .navigationTitle("Home")
-        .task { await settingsModel.loadBackends() }
+        .task(id: controller.activeEngine) { await settingsModel.loadBackends() }
     }
 }
 
@@ -166,6 +166,7 @@ private struct EngineColumn: View {
                     .accessibilityAddTraits(.isHeader)
             }
             .padding(.bottom, 4)
+            KeyValue("Runs on", controller.activeEngine.displayName)
             KeyValue("Hotkey", controller.settings.hotkey.title)
             KeyValue("Mode", controller.settings.talkMode == .hold ? "Hold to talk" : "Tap to toggle")
             KeyValue("Speech", settingsModel.backends?.asr.active ?? "—")

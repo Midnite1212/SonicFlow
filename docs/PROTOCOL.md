@@ -12,6 +12,18 @@ One WebSocket session per client; one utterance at a time per session.
 | `GET /v1/backends` | `{"asr": {"active": "<name>", "available": [...]}, "cleanup": {...}}` |
 | `POST /v1/config` with `{"asr": "<name>"?, "cleanup": "<name>"?}` | Health body once the new backends are loaded; `400` for an unknown name, `500` if loading fails (the previous backends stay active) |
 
+## Sharing with other Macs
+
+Off by default (ADR 0007). These endpoints answer only on loopback.
+
+| Request | Response |
+|---|---|
+| `GET /v1/lan` | `{"enabled": false}`, or `{"enabled": true, "host", "port", "code"}` while shared |
+| `POST /v1/lan` with `{"enabled": bool}` | The same body. Turning on starts a TLS listener on `SONICFLOW_LAN_PORT` (default 8766) on every interface and remembers the choice; `409` if the port is taken |
+| `POST /v1/lan/reset` | The same body, with a new token; clients paired with the old code stop being admitted |
+
+`code` is `sonicflow1.` followed by unpadded base64url JSON: `{"host", "port", "token", "sha256"}`, where `sha256` is the hex digest of the listener's DER certificate. On the shared listener every endpoint below (but not `/v1/lan`) is served as on loopback over `https`/`wss`. Each request must send `Authorization: Bearer <token>`; without it HTTP answers `401` and the WebSocket handshake is refused. Clients trust the certificate by comparing its digest with `sha256`, not through a CA.
+
 ## Models
 
 | Request | Response |

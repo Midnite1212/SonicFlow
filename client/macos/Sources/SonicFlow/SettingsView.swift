@@ -16,10 +16,37 @@ final class SettingsModel {
     var loginMessage: String?
     var confirmingClear = false
     var typingTest: TypingTestModel?
+    var sharing: SharingStatus?
+    var sharingMessage: String?
+    var pairing: PairingModel?
 
     func refresh() async {
         devices = AudioDevices.inputs()
         await loadBackends()
+        sharing = try? await EngineAPI.sharing()
+    }
+
+    func setSharing(_ enabled: Bool) async {
+        await updateSharing { try await EngineAPI.setSharing(enabled) }
+    }
+
+    func resetSharing() async {
+        await updateSharing { try await EngineAPI.resetSharing() }
+    }
+
+    private func updateSharing(_ change: () async throws -> SharingStatus) async {
+        do {
+            sharing = try await change()
+            sharingMessage = nil
+        } catch {
+            sharingMessage = error.localizedDescription
+        }
+    }
+
+    func copyPairingCode() {
+        guard let code = sharing?.code else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(code, forType: .string)
     }
 
     func loadBackends() async {
@@ -147,11 +174,43 @@ struct SettingsView: View {
                 }
             }
             GlassSection("Engine") {
+                GlassRow("Runs on \(controller.activeEngine.displayName)", hint: engineHint) {
+                    if controller.pairedEngine == nil {
+                        Button("Pair with Another Mac…") { model.pairing = PairingModel() }
+                    } else {
+                        Button("Unpair") { controller.unpair() }
+                    }
+                }
+                Seam()
+                GlassRow("Share this Mac's engine", hint: model.sharingMessage ?? sharingHint) {
+                    Toggle(
+                        "Share this Mac's engine",
+                        isOn: Binding(
+                            get: { model.sharing?.enabled ?? false },
+                            set: { enabled in Task { await model.setSharing(enabled) } }
+                        )
+                    )
+                    .rowSwitch()
+                    .disabled(model.sharing == nil)
+                }
+                if model.sharing?.enabled == true {
+                    Seam()
+                    GlassRow(
+                        "Pairing code",
+                        hint: "Paste it into Settings on the other Mac. Reset unpairs every Mac using it."
+                    ) {
+                        HStack {
+                            Button("Reset") { Task { await model.resetSharing() } }
+                            Button("Copy") { model.copyPairingCode() }
+                        }
+                    }
+                }
+                Seam()
                 GlassRow("Models", hint: "Choose, download and add speech and cleanup models.") {
                     Button("Open Models") { navigation.pane = .models }
                 }
                 Seam()
-                GlassRow("Speech engine", hint: model.engineMessage) {
+                GlassRow("Engine on this Mac", hint: model.engineMessage) {
                     Button("Restart") { model.restartEngine() }
                 }
             }
@@ -167,7 +226,15 @@ struct SettingsView: View {
         }
         .glassColumn()
         .navigationTitle("Settings")
-        .task { await model.refresh() }
+        .task(id: controller.activeEngine) { await model.refresh() }
+        .sheet(item: $model.pairing) { pairing in
+            PairingView(model: pairing) { code in
+                try await controller.pair(code: code)
+                model.pairing = nil
+            } cancel: {
+                model.pairing = nil
+            }
+        }
         .sheet(item: $model.typingTest) { test in
             TypingTestView(model: test) { speed in
                 settings.typingWordsPerMinute = speed
@@ -181,6 +248,22 @@ struct SettingsView: View {
         } message: {
             Text(settings.saveHistory ? "This also deletes the saved copy on this Mac." : "This can't be undone.")
         }
+    }
+
+    private var engineHint: String {
+        guard let paired = controller.pairedEngine else {
+            return "Pair with a faster Mac on your network to dictate with its models."
+        }
+        return controller.activeEngine == paired
+            ? "When \(paired.displayName) can't be reached, dictation runs on this Mac."
+            : "\(paired.displayName) can't be reached, so dictation runs on this Mac until it can."
+    }
+
+    private var sharingHint: String {
+        guard let sharing = model.sharing, sharing.enabled, let host = sharing.host, let port = sharing.port else {
+            return "Lets Macs you pair dictate with this Mac's models. Their audio arrives encrypted."
+        }
+        return "Shared as \(host), port \(port)."
     }
 
     private var modeHint: String {
