@@ -55,3 +55,25 @@ def test_from_event_accepts_strings_and_objects_and_skips_bad_items():
     assert vocabulary.correct("pria uses kubernetes") == "Priya uses Kubernetes"
     assert vocabulary.snippet_for("my email") == "r@example.com"
     assert Vocabulary.from_event({}).correct("x") == "x"
+
+
+def test_new_mishearings_that_sound_and_look_alike_are_caught():
+    vocabulary = Vocabulary(
+        (Term("Mac Studio", ("Max Videos",)), Term("Kubernetes", ("cube ernetes",)))
+    )
+    assert vocabulary.correct("It runs on the max studio.") == "It runs on the Mac Studio."
+    assert vocabulary.correct("Open Mac's videos now") == "Open Mac Studio now"
+    assert vocabulary.correct("Deploy the cube-er-netes cluster") == "Deploy the Kubernetes cluster"
+    assert vocabulary.correct("Deploy kubernetes") == "Deploy Kubernetes"
+
+
+def test_phrases_that_only_sound_alike_are_untouched():
+    vocabulary = Vocabulary((Term("Mac Studio", ("Max Videos",)), Term("Johnson")))
+    for text in (
+        "That makes it easy.",
+        "Mix stood still.",
+        "Ask Jansen about it.",
+        "Use the max. Videos later.",
+        "Upload max video files.",
+    ):
+        assert vocabulary.correct(text) == text
