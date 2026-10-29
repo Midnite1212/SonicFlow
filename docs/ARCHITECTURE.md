@@ -43,5 +43,5 @@ Latency that matters is **hotkey release → text pasted**. Everything that can 
 | Version | Shape |
 |---|---|
 | v0 | Engine on the same Mac as the client, loopback only |
-| v0.x | Engine on the M4 Max Mac Studio, client on the M3 Pro over LAN (opt-in bind) |
+| v0.5 | Engine on the M4 Max Mac Studio, client on the M3 Pro over LAN: opt-in, token and pinned TLS (ADR 0007) |
 | v1 | Engine on a GPU cloud host with CUDA backends behind the same protocol; see ADR 0004 |

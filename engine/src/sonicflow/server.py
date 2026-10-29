@@ -9,10 +9,10 @@ from contextlib import asynccontextmanager
 
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-from sonicflow import residency
+from sonicflow import lan, residency
 from sonicflow.backends.base import ASRBackend, ASRStream, CleanupBackend, CleanupContext
 from sonicflow.backends.registry import available, create_asr, create_cleanup
 from sonicflow.benchmarks import Benchmarks
@@ -50,6 +50,21 @@ class CommandError(Exception):
 class BackendChoice(BaseModel):
     asr: str | None = None
     cleanup: str | None = None
+
+
+class LanChoice(BaseModel):
+    enabled: bool
+
+
+LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "[::1]"})
+
+
+def from_this_mac(request: Request) -> None:
+    """Refuses browsers, including pages that rebind their own domain to 127.0.0.1, since the
+    sharing controls hand out the pairing token."""
+    host = request.headers.get("host", "").rsplit(":", 1)[0]
+    if host not in LOOPBACK_HOSTS or "origin" in request.headers:
+        raise HTTPException(status_code=403, detail="only SonicFlow on this Mac may change sharing")
 
 
 class Engine:
@@ -116,7 +131,7 @@ class Engine:
         self._executor.shutdown(wait=True)
 
 
-def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
+def create_app(asr: ASRBackend, cleanup: CleanupBackend, lan_port: int = 8766) -> FastAPI:
     engine = Engine(asr, cleanup)
 
     @asynccontextmanager
@@ -124,7 +139,15 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
         await engine.run(engine.load, asr)
         await engine.run(engine.load, cleanup)
         await engine.run(common_words)
+        async with sharing:
+            if lan.is_enabled():
+                try:
+                    await lan_server.start(await asyncio.to_thread(lan.identity), lan_port)
+                except Exception as error:
+                    # Dictation on this Mac must not depend on the network listener.
+                    logger.warning("could not serve the network: %r", error)
         yield
+        await lan_server.stop()
         downloads.shutdown()
         benchmarks.shutdown()
         engine.shutdown()
@@ -133,6 +156,30 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
     benchmarks = Benchmarks()
     app = FastAPI(lifespan=lifespan)
     app.include_router(model_router(engine, downloads, benchmarks))
+    lan_server = lan.LanServer(app)
+    # One change at a time: starting and stopping the listener and writing lan.json all await.
+    sharing = asyncio.Lock()
+
+    async def share(identity: lan.Identity) -> None:
+        try:
+            await lan_server.start(identity, lan_port)
+        except OSError as error:
+            raise HTTPException(
+                status_code=409,
+                detail=f"could not listen on port {lan_port}: {error.strerror or error}",
+            ) from None
+
+    async def lan_status() -> dict:
+        if not lan_server.running:
+            return {"enabled": False}
+        identity = await asyncio.to_thread(lan.identity)
+        host = await asyncio.to_thread(lan.host_name)
+        return {
+            "enabled": True,
+            "host": host,
+            "port": lan_server.port,
+            "code": lan.pairing_code(identity, host, lan_server.port),
+        }
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -158,6 +205,30 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend) -> FastAPI:
             raise HTTPException(status_code=500, detail=f"failed to load: {error}") from None
         save_backend_choice(engine.asr.name, engine.cleanup.name)
         return health()
+
+    # Only the loopback listener reaches these; lan.RequireToken refuses them on the network.
+    @app.get("/v1/lan", dependencies=[Depends(from_this_mac)])
+    async def get_lan() -> dict:
+        async with sharing:
+            return await lan_status()
+
+    @app.post("/v1/lan", dependencies=[Depends(from_this_mac)])
+    async def set_lan(choice: LanChoice) -> dict:
+        async with sharing:
+            if choice.enabled:
+                await share(await asyncio.to_thread(lan.identity))
+            else:
+                await lan_server.stop()
+            lan.set_enabled(choice.enabled)
+            return await lan_status()
+
+    @app.post("/v1/lan/reset", dependencies=[Depends(from_this_mac)])
+    async def reset_lan() -> dict:
+        async with sharing:
+            identity = await asyncio.to_thread(lan.identity, True)
+            if lan_server.running:
+                await share(identity)
+            return await lan_status()
 
     @app.websocket("/v1/dictate")
     async def dictate(ws: WebSocket) -> None:
@@ -256,5 +327,5 @@ def main() -> None:
     settings = Settings.from_env()
     if not settings.asr:
         sys.exit("SONICFLOW_ASR is not set")
-    app = create_app(create_asr(settings.asr), create_cleanup(settings.cleanup))
+    app = create_app(create_asr(settings.asr), create_cleanup(settings.cleanup), settings.lan_port)
     uvicorn.run(app, host=settings.host, port=settings.port)
