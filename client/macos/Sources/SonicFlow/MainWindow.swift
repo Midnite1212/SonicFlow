@@ -4,7 +4,7 @@ import SonicFlowCore
 import SwiftUI
 
 enum Pane: String, CaseIterable, Identifiable {
-    case home, history, dictionary, snippets, styles, models, settings
+    case home, history, dictionary, learning, snippets, styles, models, settings
 
     var id: Self { self }
 
@@ -13,6 +13,7 @@ enum Pane: String, CaseIterable, Identifiable {
         case .home: "Home"
         case .history: "History"
         case .dictionary: "Dictionary"
+        case .learning: "Learning"
         case .snippets: "Snippets"
         case .styles: "Styles"
         case .models: "Models"
@@ -25,6 +26,7 @@ enum Pane: String, CaseIterable, Identifiable {
         case .home: "house"
         case .history: "clock.arrow.circlepath"
         case .dictionary: "character.book.closed"
+        case .learning: "lightbulb"
         case .snippets: "text.insert"
         case .styles: "textformat"
         case .models: "cpu"
@@ -109,7 +111,7 @@ struct RootView: View {
             NavigationSplitView {
                 List {
                     Section { rows(.home, .history) }
-                    Section("Personalize") { rows(.dictionary, .snippets, .styles) }
+                    Section("Personalize") { rows(.dictionary, .learning, .snippets, .styles) }
                     Section("Setup") { rows(.models, .settings) }
                 }
                 .listStyle(.sidebar)
@@ -122,6 +124,7 @@ struct RootView: View {
                         controller: controller, settings: controller.settings, model: navigation.history
                     )
                 case .dictionary: DictionaryView(store: controller.personalization, model: navigation.vocabulary)
+                case .learning: LearningView(controller: controller, settings: controller.settings)
                 case .snippets: SnippetsView(store: controller.personalization, model: navigation.vocabulary)
                 case .styles: StylesView(store: controller.personalization)
                 case .models: ModelsView(model: navigation.models)
@@ -161,6 +164,7 @@ struct RootView: View {
         switch pane {
         case .history: controller.history.entries.count
         case .dictionary: controller.personalization.terms.count
+        case .learning: controller.learning.suggestions.count
         case .snippets: controller.personalization.snippets.count
         default: 0
         }

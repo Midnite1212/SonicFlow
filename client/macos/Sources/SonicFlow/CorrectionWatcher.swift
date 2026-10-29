@@ -4,7 +4,7 @@ import Carbon
 import SonicFlowCore
 
 /// After a paste, follows the user's fixes until they move on, then passes on the misheard words
-/// they fixed. Fields that Accessibility can read are reread; elsewhere, such as terminals, the
+/// they fixed, learned or held for review. Fields that Accessibility can read are reread; elsewhere, such as terminals, the
 /// edit keys are replayed on the pasted line. Field text and keys stay in memory and are never
 /// logged.
 @MainActor
@@ -14,7 +14,7 @@ final class CorrectionWatcher {
     private static let checks = 60
     private static let maxFieldLength = 100_000
 
-    var onLearn: ([LearnedWord]) -> Void = { _ in }
+    var onLearn: ([Correction]) -> Void = { _ in }
     private var task: Task<Void, Never>?
     private var replay: KeyReplay?
 
@@ -61,8 +61,8 @@ final class CorrectionWatcher {
             edited = await replayed(replay)
         }
         guard let edited, edited != pasted else { return }
-        let words = Corrections.learn(pasted: pasted, edited: edited, isCommonWord: CommonWords.contains)
-        if !words.isEmpty { onLearn(words) }
+        let found = Corrections.find(pasted: pasted, edited: edited, isCommonWord: CommonWords.contains)
+        if !found.isEmpty { onLearn(found) }
     }
 
     private func reread(_ field: FocusedField, _ region: PastedRegion, _ pasted: String) async -> String {
