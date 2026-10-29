@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import CoreGraphics
 import SonicFlowCore
 
@@ -29,6 +30,9 @@ final class HotkeyMonitor {
     }
 
     var hotkey: Hotkey
+    /// Every key press and click, for following fixes to a paste; the edit is worked out only if
+    /// the receiver asks for it, and is never logged.
+    var onEdit: ((() -> EditKey) -> Void)?
     private let handler: (Input) -> Void
     private var tap: CFMachPort?
 
@@ -60,8 +64,12 @@ final class HotkeyMonitor {
     fileprivate func process(_ type: CGEventType, _ event: CGEvent) {
         guard event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { return }
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+        if let onEdit, [.keyDown, .leftMouseDown, .rightMouseDown].contains(type) {
+            onEdit { type == .keyDown ? Self.edit(event) : .unsupported }
+        }
         switch type {
         case .tapDisabledByTimeout, .tapDisabledByUserInput:
+            onEdit? { .unsupported }
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
         case .flagsChanged:
             let time = NSEvent(cgEvent: event)?.timestamp ?? ProcessInfo.processInfo.systemUptime
@@ -82,6 +90,31 @@ final class HotkeyMonitor {
         default:
             handler(.other("mouse"))
         }
+    }
+}
+
+extension HotkeyMonitor {
+    /// Input methods (Pinyin, Cangjie, Kana) compose text from keys the tap sees raw, so only a
+    /// plain keyboard layout's keys can be followed.
+    fileprivate static func edit(_ event: CGEvent) -> EditKey {
+        guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(),
+            let type = TISGetInputSourceProperty(source, kTISPropertyInputSourceType),
+            Unmanaged<CFString>.fromOpaque(type).takeUnretainedValue() == kTISTypeKeyboardLayout
+        else { return .unsupported }
+        var buffer = [UniChar](repeating: 0, count: 8)
+        var length = 0
+        event.keyboardGetUnicodeString(
+            maxStringLength: buffer.count, actualStringLength: &length, unicodeString: &buffer
+        )
+        let flags = event.flags
+        return EditKey.from(
+            keyCode: event.getIntegerValueField(.keyboardEventKeycode),
+            command: flags.contains(.maskCommand),
+            option: flags.contains(.maskAlternate),
+            control: flags.contains(.maskControl),
+            shift: flags.contains(.maskShift),
+            characters: String(utf16CodeUnits: buffer, count: length)
+        )
     }
 }
 

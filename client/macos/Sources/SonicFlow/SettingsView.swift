@@ -123,7 +123,8 @@ struct SettingsView: View {
                 GlassRow(
                     "Learn words from your corrections",
                     hint: "When you fix a misheard name or term right after pasting, it's added to your "
-                        + "Dictionary. The text you edit is read only to compare and is never saved."
+                        + "Dictionary, in text fields and terminals alike. What you edit and type is read "
+                        + "only to compare and is never saved."
                 ) {
                     Toggle("Learn words from your corrections", isOn: $settings.learnFromCorrections).rowSwitch()
                 }

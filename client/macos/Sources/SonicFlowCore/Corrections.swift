@@ -52,8 +52,13 @@ public struct PastedRegion: Equatable, Sendable {
 public enum Corrections {
     static let maxWords = 3
     static let maxLength = 40
-    /// How alike the heard and fixed spellings must be, so rewording isn't mistaken for a mishearing.
+    /// How alike the heard and fixed words must look or sound, so rewording isn't mistaken for a
+    /// mishearing.
     static let minSimilarity = 0.5
+    static let minSpellingForSound = 0.3
+    static let minSoundLength = 4
+
+    typealias Phrase = (heard: [String], term: [String])
 
     /// `isCommonWord` gets a lowercased word; a fix made only of common words, like "will" to
     /// "Will", is left alone because learning it would rewrite the common word everywhere.
@@ -61,44 +66,145 @@ public enum Corrections {
         pasted: String, edited: String, isCommonWord: (String) -> Bool
     ) -> [LearnedWord] {
         let old = words(pasted)
-        let hunks = changes(from: old, to: words(edited))
+        let new = words(edited)
+        let hunks = changes(from: old.map(\.text), to: new.map(\.text))
         let changed = hunks.reduce(0) { $0 + $1.old.count }
         guard changed <= max(maxWords, old.count / 2) else { return [] }
-        return hunks.compactMap { learned(from: $0, isCommonWord: isCommonWord) }
+        return hunks.compactMap { learned(from: $0, old: old, new: new, isCommonWord: isCommonWord) }
     }
 
-    private static func learned(from hunk: Hunk, isCommonWord: (String) -> Bool) -> LearnedWord? {
-        guard (1...maxWords).contains(hunk.old.count), (1...maxWords).contains(hunk.new.count) else {
-            return nil
-        }
-        let term = hunk.new.joined(separator: " ")
-        let heard = hunk.old.joined(separator: " ")
-        // A single common word heard ("it", "were", "meeting") would be rewritten everywhere, and
-        // apostrophes mark grammar fixes rather than names.
-        guard (2...maxLength).contains(term.count),
-            !(hunk.old.count == 1 && isCommonWord(heard.lowercased())),
-            !term.contains(where: { $0 == "'" || $0 == "\u{2019}" }),
-            hunk.new.contains(where: { looksLikeVocabulary($0, isCommonWord: isCommonWord) }),
-            similarity(letters(heard), letters(term)) >= minSimilarity
+    private static func learned(
+        from hunk: Hunk, old: [Word], new: [Word], isCommonWord: (String) -> Bool
+    ) -> LearnedWord? {
+        // A single common word heard ("it", "were", "meeting") would be rewritten everywhere.
+        guard (1...maxWords).contains(hunk.old.count), (1...maxWords).contains(hunk.new.count),
+            !(hunk.old.count == 1 && isCommonWord(old[hunk.old.lowerBound].text.lowercased()))
         else { return nil }
-        return LearnedWord(term: term, heard: heard.lowercased() == term.lowercased() ? nil : heard)
+        let fix = (heard: old[hunk.old].map(\.text), term: new[hunk.new].map(\.text))
+        if isName(fix, isCommonWord: isCommonWord) { return candidate(fix) }
+        guard let name = widenedToName(hunk, old: old, new: new, isCommonWord: isCommonWord),
+            isName(name, isCommonWord: isCommonWord)
+        else { return nil }
+        return candidate(name)
     }
 
-    /// Numbers alone are content, not vocabulary, so a digit counts only beside a letter ("Qwen3").
-    private static func looksLikeVocabulary(_ word: String, isCommonWord: (String) -> Bool) -> Bool {
-        guard word.contains(where: \.isLetter) else { return false }
-        return word.contains(where: \.isNumber) || word.dropFirst().contains(where: \.isUppercase)
-            || !isCommonWord(word.lowercased())
+    private static func isName(_ words: Phrase, isCommonWord: (String) -> Bool) -> Bool {
+        let caseOnly = words.heard.joined(separator: " ").lowercased() == words.term.joined(separator: " ").lowercased()
+        return looksLikeVocabulary(words.term, capitalsCount: !caseOnly, isCommonWord: isCommonWord)
     }
 
-    private static func words(_ text: String) -> [String] {
-        text.split(whereSeparator: \.isWhitespace)
-            .map { $0.trimmingCharacters(in: CharacterSet.alphanumerics.inverted) }
-            .filter { !$0.isEmpty }
+    private static func candidate(_ words: Phrase) -> LearnedWord? {
+        let term = words.term.joined(separator: " ")
+        let heard = words.heard.joined(separator: " ")
+        let caseOnly = heard.lowercased() == term.lowercased()
+        // Sound keys collide, between short words ("the team" and "Tim") and between names
+        // ("Jonathan" and "Johnson"), so sound counts only for phrases misheard as other words
+        // ("Max Videos"), with long enough keys and spellings somewhat alike.
+        let spelling = similarity(letters(heard), letters(term))
+        let (heardSound, termSound) = (sound(heard), sound(term))
+        let sounding =
+            max(words.heard.count, words.term.count) > 1 && spelling >= minSpellingForSound
+                && min(heardSound.count, termSound.count) >= minSoundLength
+            ? similarity(heardSound, termSound) : 0
+        // An apostrophe left after dropping possessives marks a grammar fix ("we're"), not a name;
+        // text typed straight after a word ("config" → "config.yaml") is not a fix of it.
+        guard (2...maxLength).contains(term.count),
+            !term.contains(where: { $0 == "'" || $0 == "\u{2019}" }),
+            !(term.count > heard.count && term.lowercased().hasPrefix(heard.lowercased())),
+            max(spelling, sounding) >= minSimilarity
+        else { return nil }
+        return LearnedWord(term: term, heard: caseOnly ? nil : heard)
+    }
+
+    /// Widens a fix that isn't a name on its own to the unchanged capitalized words beside it, so
+    /// "Stoo videos" → "Studio" after "Mac" is learned as "Mac Studio". Capitals that only start a
+    /// sentence, and "I", don't make a name.
+    private static func widenedToName(
+        _ hunk: Hunk, old: [Word], new: [Word], isCommonWord: (String) -> Bool
+    ) -> Phrase? {
+        func partOfName(_ word: Word) -> Bool {
+            word.capitalized && word.text != "I" && !(word.sentenceStart && isCommonWord(word.text.lowercased()))
+        }
+        guard new[hunk.new].contains(where: { $0.capitalized && !$0.sentenceStart }) else { return nil }
+        var oldRange = hunk.old
+        var newRange = hunk.new
+        func fits() -> Bool { max(oldRange.count, newRange.count) < maxWords }
+        while fits(), newRange.lowerBound > 0, partOfName(new[newRange.lowerBound - 1]) {
+            oldRange = oldRange.lowerBound - 1..<oldRange.upperBound
+            newRange = newRange.lowerBound - 1..<newRange.upperBound
+        }
+        while fits(), newRange.upperBound < new.count, partOfName(new[newRange.upperBound]) {
+            oldRange = oldRange.lowerBound..<oldRange.upperBound + 1
+            newRange = newRange.lowerBound..<newRange.upperBound + 1
+        }
+        guard newRange != hunk.new else { return nil }
+        return (old[oldRange].map(\.text), new[newRange].map(\.text))
+    }
+
+    /// Names and jargon: a capital inside a word ("GitHub"), a digit beside a letter ("Qwen3"), a
+    /// word missing from the word list, or, when the spelling changed too, a phrase capitalized
+    /// throughout ("Mac Studio"). Capitalizing common words alone ("That Was") is not a name.
+    private static func looksLikeVocabulary(
+        _ words: [String], capitalsCount: Bool, isCommonWord: (String) -> Bool
+    ) -> Bool {
+        if capitalsCount, words.count > 1, words.allSatisfy({ $0.first?.isUppercase == true }) { return true }
+        return words.contains { word in
+            word.contains(where: \.isLetter)
+                && (word.contains(where: \.isNumber) || word.dropFirst().contains(where: \.isUppercase)
+                    || !isCommonWord(word.lowercased()))
+        }
+    }
+
+    private struct Word {
+        let text: String
+        let sentenceStart: Bool
+
+        var capitalized: Bool { text.first?.isUppercase == true }
+    }
+
+    private static let closers = CharacterSet(charactersIn: "\"')]}\u{201D}\u{2019}")
+
+    /// Words without edge punctuation or a possessive "'s", so "Studio's," matches "Studio".
+    private static func words(_ text: String) -> [Word] {
+        var words: [Word] = []
+        var sentenceStart = true
+        for token in text.split(whereSeparator: \.isWhitespace) {
+            var word = token.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+            for mark in ["'s", "\u{2019}s"] where word.hasSuffix(mark) { word.removeLast(2) }
+            if !word.isEmpty { words.append(Word(text: word, sentenceStart: sentenceStart)) }
+            sentenceStart = token.trimmingCharacters(in: Self.closers).last.map { ".!?\u{2026}".contains($0) } ?? false
+        }
+        return words
     }
 
     private static func letters(_ text: String) -> [Character] {
         text.lowercased().filter { $0.isLetter || $0.isNumber }.map { $0 }
+    }
+
+    /// A rough sound-alike key: consonants grouped by how they sound, vowels dropped after the
+    /// first letter. "Max Videos" and "Mac Studio" come out close though spelled apart.
+    private static func sound(_ text: String) -> [Character] {
+        let spelled = String(letters(text))
+            .replacingOccurrences(of: "ph", with: "f")
+            .replacingOccurrences(of: "ck", with: "k")
+        var key: [Character] = []
+        for (index, letter) in spelled.enumerated() {
+            let codes: String
+            switch letter {
+            case "b", "p": codes = "p"
+            case "c", "g", "k", "q": codes = "k"
+            case "x": codes = "ks"
+            case "d", "t": codes = "t"
+            case "f", "v": codes = "f"
+            case "s", "z": codes = "s"
+            case "m", "n": codes = "m"
+            case "a", "e", "i", "o", "u": codes = index == 0 ? "a" : ""
+            case "h", "w", "y": codes = ""
+            default: codes = String(letter)
+            }
+            for code in codes where code != key.last { key.append(code) }
+        }
+        return key
     }
 
     private static func similarity(_ a: [Character], _ b: [Character]) -> Double {
@@ -115,8 +221,8 @@ public enum Corrections {
     }
 
     struct Hunk: Equatable {
-        var old: [String] = []
-        var new: [String] = []
+        var old: Range<Int>
+        var new: Range<Int>
     }
 
     /// The runs of words that differ, from a longest-common-subsequence alignment.
@@ -129,24 +235,25 @@ public enum Corrections {
             }
         }
         var hunks: [Hunk] = []
-        var hunk = Hunk()
         var i = 0
         var j = 0
+        var start = (old: 0, new: 0)
+        func close() {
+            if start.old < i || start.new < j { hunks.append(Hunk(old: start.old..<i, new: start.new..<j)) }
+        }
         while i < old.count || j < new.count {
             if i < old.count, j < new.count, old[i] == new[j] {
-                if hunk != Hunk() { hunks.append(hunk) }
-                hunk = Hunk()
+                close()
                 i += 1
                 j += 1
+                start = (i, j)
             } else if j < new.count, i == old.count || lengths[i][j + 1] >= lengths[i + 1][j] {
-                hunk.new.append(new[j])
                 j += 1
             } else {
-                hunk.old.append(old[i])
                 i += 1
             }
         }
-        if hunk != Hunk() { hunks.append(hunk) }
+        close()
         return hunks
     }
 }
