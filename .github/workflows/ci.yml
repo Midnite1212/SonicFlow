@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   engine:
-    runs-on: macos-15
+    runs-on: macos-26
     defaults:
       run:
         working-directory: engine
@@ -29,7 +29,7 @@ jobs:
       - run: uv run --frozen pytest -q
 
   client:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - run: client/macos/scripts/test.sh
