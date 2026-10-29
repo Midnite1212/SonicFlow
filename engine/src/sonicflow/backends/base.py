@@ -1,3 +1,4 @@
+import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
@@ -27,6 +28,8 @@ class ASRStream:
 class ASRBackend(ABC):
     name: str
     sample_rate: int = SAMPLE_RATE
+    # Transcribing is cheap enough to repeat on every pause in speech (see rolling).
+    rolling: bool = False
 
     def load(self) -> None:
         pass
@@ -52,6 +55,8 @@ class ASRBackend(ABC):
 class CleanupContext:
     app_bundle_id: str | None = None
     dictionary: tuple[str, ...] = field(default_factory=tuple)
+    # Rewrites already made for this utterance, by the exact text rewritten.
+    rewrites: dict[str, str] = field(default_factory=dict, compare=False, hash=False)
 
 
 class CleanupBackend(ABC):
@@ -72,6 +77,10 @@ class CleanupBackend(ABC):
 
     @abstractmethod
     def clean(self, text: str, context: CleanupContext) -> str: ...
+
+    def prepare(self, text: str, context: CleanupContext, cancelled: threading.Event) -> None:
+        """Does cleanup work for a partial transcript ahead of release, keeping it in `context`.
+        Stops promptly once `cancelled` is set, so release never waits on it."""
 
     def edit(self, selection: str, instruction: str) -> str:
         """Rewrites `selection` as the spoken `instruction` asks (command mode)."""

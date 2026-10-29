@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-from sonicflow import lan, residency
+from sonicflow import lan, residency, rolling
 from sonicflow.backends.base import ASRBackend, ASRStream, CleanupBackend, CleanupContext
 from sonicflow.backends.registry import available, create_asr, create_cleanup
 from sonicflow.benchmarks import Benchmarks
@@ -37,7 +37,7 @@ def elapsed_ms(start: float, end: float) -> float:
 
 def _log_failure(future: Future) -> None:
     if (error := future.exception()) is not None:
-        logger.warning("warm-up failed: %r", error)
+        logger.warning("background inference failed: %r", error)
 
 
 KEEP_WARM_S = 1.0
@@ -90,11 +90,16 @@ class Engine:
     async def run[T](self, fn: Callable[..., T], *args: object) -> T:
         return await asyncio.get_running_loop().run_in_executor(self._executor, fn, *args)
 
+    def submit(self, fn: Callable[..., object], *args: object) -> Future:
+        """Queues work on the inference thread without waiting for it."""
+        future = self._executor.submit(fn, *args)
+        future.add_done_callback(_log_failure)
+        return future
+
     def warm_in_background(self) -> None:
         """Wakes the GPU and pages model weights back in while the user is still speaking."""
         self._warmed_at = time.monotonic()
-        future = self._executor.submit(self._warm)
-        future.add_done_callback(_log_failure)
+        self.submit(self._warm)
 
     def keep_warm(self) -> None:
         """Repeats the warm-up while audio streams in, since an idle GPU clocks down within a
@@ -234,6 +239,7 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend, lan_port: int = 8766) -
     async def dictate(ws: WebSocket) -> None:
         await ws.accept()
         stream: ASRStream | None = None
+        speech: rolling.Rolling | None = None
         cleanup = engine.cleanup
         context = CleanupContext()
         vocabulary = Vocabulary()
@@ -270,6 +276,11 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend, lan_port: int = 8766) -
                         await send_error("audio received before start")
                         continue
                     engine.keep_warm()
+                    if speech is not None:
+                        # Rolling keeps the audio itself, so this loop never waits on inference
+                        # and reads `stop` the moment it arrives.
+                        speech.add(pcm16_to_float32(data))
+                        continue
                     partial = await engine.run(stream.feed, pcm16_to_float32(data))
                     if partial is not None:
                         await ws.send_json({"type": "partial", "text": partial})
@@ -287,12 +298,30 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend, lan_port: int = 8766) -
                             app_bundle_id=event.get("app"),
                             dictionary=tuple(term.term for term in vocabulary.terms),
                         )
+                        if speech is not None:
+                            speech.cancel()
+                        speech = (
+                            rolling.Rolling(
+                                engine.asr, cleanup, context, vocabulary.correct, engine.submit
+                            )
+                            if engine.asr.rolling and rolling.enabled()
+                            else None
+                        )
                     case "stop":
                         if stream is None:
                             await send_error("stop received before start")
                             continue
                         stopped_at = time.perf_counter()
-                        raw = await engine.run(stream.finalize)
+                        if speech is not None:
+                            selection = event.get("selection")
+                            if isinstance(selection, str) and selection.strip():
+                                # A command's words are an instruction, never cleaned up.
+                                speech.cancel()
+                            speech.release()
+                            raw = await engine.run(speech.transcript)
+                        else:
+                            raw = await engine.run(stream.finalize)
+                        speech = None
                         if is_filler(raw):
                             raw = ""
                         asr_done_at = time.perf_counter()
@@ -319,6 +348,10 @@ def create_app(asr: ASRBackend, cleanup: CleanupBackend, lan_port: int = 8766) -
                         await send_error(f"unknown message type {other!r}")
         except WebSocketDisconnect:
             return
+        finally:
+            # Work for an utterance that never finished must not hold up the next one.
+            if speech is not None:
+                speech.cancel()
 
     return app
 

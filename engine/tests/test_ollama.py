@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from sonicflow.backends import ollama
+from sonicflow.backends.base import CleanupContext
 from sonicflow.backends.ollama import OllamaCleanup, OllamaUnavailable, pulled_models
 from sonicflow.backends.registry import PassthroughCleanup, create_cleanup
 from sonicflow.models import ModelNotDownloaded, load_custom
@@ -69,7 +70,9 @@ def test_cleanup_sends_examples_and_keeps_model_warm(fake_ollama):
     assert isinstance(backend, OllamaCleanup)
     backend.load()
     FakeOllama.chats = []
-    assert backend.clean("Ship it Friday, no wait, Thursday.", None) == "Ship it Friday."
+    assert (
+        backend.clean("Ship it Friday, no wait, Thursday.", CleanupContext()) == "Ship it Friday."
+    )
     chat = FakeOllama.chats[0]
     assert chat["model"] == "llama3.2:3b"
     assert chat["stream"] is False and chat["keep_alive"] == "30m"
@@ -80,7 +83,7 @@ def test_cleanup_sends_examples_and_keeps_model_warm(fake_ollama):
 
 def test_unflagged_text_never_reaches_ollama(fake_ollama):
     backend = OllamaCleanup("o", "llama3.2:3b")
-    assert backend.clean("Hello there.", None) == "Hello there."
+    assert backend.clean("Hello there.", CleanupContext()) == "Hello there."
     assert FakeOllama.chats == []
 
 

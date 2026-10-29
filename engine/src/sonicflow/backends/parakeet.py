@@ -10,6 +10,8 @@ from sonicflow.speech import is_unsure_fragment
 
 
 class ParakeetASR(ASRBackend):
+    rolling = True
+
     def __init__(self, name: str, repo_id: str) -> None:
         self.name = name
         self.repo_id = repo_id

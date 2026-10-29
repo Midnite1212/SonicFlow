@@ -1,4 +1,5 @@
 import json
+import threading
 import urllib.error
 import urllib.request
 
@@ -62,7 +63,7 @@ class OllamaCleanup(PromptCleanup):
         )
         return clean_output(response.get("message", {}).get("content", ""))
 
-    def _rewrite(self, text: str) -> str:
+    def _rewrite(self, text: str, cancelled: threading.Event | None = None) -> str:
         return self._chat(cleanup_messages(text), min(2 * len(text.split()) + 16, 512))
 
     def edit(self, selection: str, instruction: str) -> str:

@@ -12,7 +12,7 @@
   - [x] Local LLM cleanup (#10) — qwen3-1.7b default (~150 ms per rewrite, 5.7% clean WER); qwen3-4b for quality (~300 ms, 5.1%)
   - [x] Prompt v2 and hallucination guard (#23) — qwen3-4b now default: every corpus item correct, 3.4% clean WER
   - [x] Sentence-level cleanup (#36) — long passage 1,702 → 297 ms, identical output
-- [ ] v0.3 Rolling cleanup during speech (self-correction across pauses)
+- [x] v0.3 Rolling cleanup during speech (self-correction across pauses) (#77, ADR 0003) — release 500 ms after the last word: ~430 → ~40 ms p50 on the M3 Pro
 - [ ] v0.4 macOS client: menu bar, hold-to-talk + toggle hotkey, paste into the focused app, latency HUD
   - [x] Terminal mic client, hold Option to talk (#13)
   - [x] Warm-up on hotkey press removes the idle penalty (#14)

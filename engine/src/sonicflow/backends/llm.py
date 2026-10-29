@@ -1,3 +1,5 @@
+import threading
+
 import mlx.core as mx
 import mlx_lm
 from mlx.utils import tree_flatten
@@ -5,6 +7,7 @@ from mlx_lm.models.cache import can_trim_prompt_cache, make_prompt_cache, trim_p
 from mlx_lm.sample_utils import make_sampler
 
 from sonicflow.backends.prompting import (
+    Interrupted,
     PromptCleanup,
     accept_rewrite,
     clean_output,
@@ -19,6 +22,8 @@ _PLACEHOLDER = "\x00USER_TEXT\x00"
 
 
 class LLMCleanup(PromptCleanup):
+    interruptible = True
+
     def __init__(self, name: str, repo_id: str) -> None:
         self.name = name
         self.repo_id = repo_id
@@ -58,17 +63,22 @@ class LLMCleanup(PromptCleanup):
     def _encode(self, text: str) -> list[int]:
         return self._tokenizer.encode(text, add_special_tokens=False)
 
-    def _rewrite(self, text: str) -> str:
+    def _rewrite(self, text: str, cancelled: threading.Event | None = None) -> str:
         user_tokens = self._encode(text)
+        output = ""
         try:
-            output = mlx_lm.generate(
+            # The same tokens mlx_lm.generate would join, checked for cancellation between them.
+            for response in mlx_lm.stream_generate(
                 self._model,
                 self._tokenizer,
                 user_tokens + self._encode(self._suffix),
                 max_tokens=min(2 * len(user_tokens) + 16, 512),
                 sampler=self._sampler,
                 prompt_cache=self._cache,
-            )
+            ):
+                if cancelled is not None and cancelled.is_set():
+                    raise Interrupted
+                output += response.text
         finally:
             trim_prompt_cache(self._cache, self._cache[0].offset - self._prefix_len)
         return clean_output(output)
