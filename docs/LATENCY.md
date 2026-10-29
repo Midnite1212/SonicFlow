@@ -25,7 +25,7 @@ Accuracy floor: corpus WER (raw vs spoken) ≤ 5% on the synthetic corpus; re-ba
 
 ## Results
 
-Current matrix (21-item corpus, one run each). WER spells numbers under 100 as words, splits camelCase and joins known compounds on both sides, so formatting differences ("10:30" vs "ten thirty") no longer count as errors (#6):
+Current matrix (21-item corpus; M3 Pro one run each, M4 Max two). WER spells numbers under 100 as words, splits camelCase and joins known compounds on both sides, so formatting differences ("10:30" vs "ten thirty") no longer count as errors (#6):
 
 | Date | Machine | ASR | Cleanup | release→text p50 | WER raw | WER clean |
 |---|---|---|---|---|---|---|
@@ -35,6 +35,14 @@ Current matrix (21-item corpus, one run each). WER spells numbers under 100 as w
 | 2026-10-27 | Apple M3 Pro | parakeet-v2 | rules | 113 ms | 1.3% | 13.2% |
 | 2026-10-27 | Apple M3 Pro | parakeet-v2 | qwen3-1.7b | 234 ms | 1.3% | 2.3% |
 | 2026-10-27 | Apple M3 Pro | parakeet-v2 | qwen3-4b | 378 ms | 1.3% | 0.8% |
+| 2026-10-29 | Apple M4 Max | parakeet-v2 | none | 41 ms | 1.3% | 15.4% |
+| 2026-10-29 | Apple M4 Max | parakeet-v3 | none | 43–44 ms | 1.6% | 16.2% |
+| 2026-10-29 | Apple M4 Max | whisper-turbo | none | 211 ms | 1.3% | 15.0% |
+| 2026-10-29 | Apple M4 Max | parakeet-v2 | rules | 40–41 ms | 1.3% | 13.2% |
+| 2026-10-29 | Apple M4 Max | parakeet-v2 | qwen3-1.7b | 91 ms | 1.3% | 2.3% |
+| 2026-10-29 | Apple M4 Max | parakeet-v2 | qwen3-4b | 133 ms | 1.3% | 0.8% |
+
+The M4 Max is 2.6–3× faster at every combination with the same WER, and runs v2 + qwen3-4b inside the raw-transcript budget (p95 164–165 ms). Both machines used the same corpus audio: `say` voices differ between macOS releases, and macOS 27's Samantha reads several items as run-on sentences that cost qwen3-1.7b 9 points of clean WER, so compare WER across machines only on identical WAVs.
 
 History (WER before normalisation):
 
