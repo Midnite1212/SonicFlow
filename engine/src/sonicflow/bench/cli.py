@@ -14,7 +14,7 @@ import jiwer
 import numpy as np
 import soundfile as sf
 
-from sonicflow import SAMPLE_RATE, rolling
+from sonicflow import SAMPLE_RATE, residency, rolling
 from sonicflow.backends.base import ASRBackend, CleanupBackend, CleanupContext
 from sonicflow.backends.registry import create_asr, create_cleanup
 
@@ -227,6 +227,7 @@ def main() -> None:
 
     # MLX models run on the thread that loaded them, so as in the server everything runs on one.
     with ThreadPoolExecutor(max_workers=1) as inference:
+        inference.submit(residency.limit_cache).result()
         load_start = time.perf_counter()
         inference.submit(asr.load).result()
         inference.submit(cleanup.load).result()

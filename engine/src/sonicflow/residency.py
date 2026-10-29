@@ -16,6 +16,21 @@ def enabled() -> bool:
     return os.environ.get("SONICFLOW_LOCK_MODELS", "1") != "0"
 
 
+# Uncapped, MLX keeps every freed buffer for reuse: the float32 weights read at load and buffers
+# sized by the longest dictation, 5.9 GB after 3 minutes of audio. 1 GB keeps streaming dictation
+# as fast as uncapped on an M3 Pro; 256 MB cost ~10 ms per dictation and no cache ~40 ms.
+DEFAULT_CACHE_MB = 1024
+
+
+def limit_cache() -> None:
+    """Caps the memory MLX keeps for reuse once buffers are freed (`SONICFLOW_MLX_CACHE_MB`)."""
+    try:
+        import mlx.core as mx
+    except ImportError:
+        return
+    mx.set_cache_limit(int(os.environ.get("SONICFLOW_MLX_CACHE_MB", DEFAULT_CACHE_MB)) * 2**20)
+
+
 def _libc() -> ctypes.CDLL:
     libc = ctypes.CDLL(None, use_errno=True)
     for name in ("mlock", "munlock"):
