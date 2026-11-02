@@ -9,6 +9,8 @@ from typing import Literal
 from sonicflow.config import config_path
 
 Kind = Literal["asr", "cleanup"]
+# Ollama's `think`: models such as gpt-oss ignore `False` and accept only a level.
+Think = bool | Literal["low", "medium", "high"]
 
 # Families name the runtime that loads a model; each maps to one backend class.
 FAMILY_KIND: dict[str, Kind] = {
@@ -38,6 +40,7 @@ class Model:
     size_bytes: int | None = None
     note: str = ""
     bench: Bench | None = None
+    think: Think = False
 
     @property
     def is_local_folder(self) -> bool:
@@ -283,6 +286,7 @@ def load_custom() -> list[Model]:
                     title=item["title"],
                     group="custom",
                     size_bytes=item.get("size_bytes"),
+                    think=item.get("think", False),
                 )
             )
         except (KeyError, TypeError):
@@ -293,7 +297,7 @@ def load_custom() -> list[Model]:
 def save_custom(models: list[Model]) -> None:
     path = custom_models_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    fields = ("id", "kind", "family", "source", "title", "size_bytes")
+    fields = ("id", "kind", "family", "source", "title", "size_bytes", "think")
     payload = [{key: getattr(model, key) for key in fields} for model in models]
     staging = path.with_suffix(".tmp")
     staging.write_text(json.dumps(payload, indent=2) + "\n")

@@ -34,7 +34,7 @@ Off by default (ADR 0007). These endpoints answer only on loopback.
 | `POST /v1/models/custom` with `{"source", "title"?}` | The new model. `source` is a Hugging Face repo (`org/name`, MLX builds only) or an absolute folder with `config.json` and `.safetensors`; the family is detected. `400` with a reason otherwise |
 | `GET /v1/models/search?q=&kind=asr\|cleanup` | `{"results": [{source, family, kind, downloads, added}]}`: MLX models on Hugging Face, most downloaded first. Contacts Hugging Face, so clients call it only when the user searches; `502` if unreachable |
 | `GET /v1/models/ollama` | `{"running": bool, "models": [{name, size, added}]}` from Ollama at `SONICFLOW_OLLAMA_URL` (default this Mac) |
-| `POST /v1/models/custom` with `{"source": "<ollama model>", "family": "ollama"}` | Adds a model Ollama has pulled as a cleanup model (id `ollama:<name>`); `400` if Ollama is not running or the model is not pulled |
+| `POST /v1/models/custom` with `{"source": "<ollama model>", "family": "ollama", "think"?}` | Adds a model Ollama has pulled as a cleanup model (id `ollama:<name>`), or replaces it when already added; `400` if Ollama is not running or the model is not pulled. `think` (`false` default, `true`, `"low"`, `"medium"`, `"high"`) is sent on every request, for models such as `gpt-oss` that cannot turn thinking off; it applies the next time the model loads |
 | `POST /v1/models/remove` with `{"id"}` | Deletes downloaded files and forgets a custom model (local folders stay on disk). `409` for an active model |
 
 Any installed model id, or `family:source`, is accepted by `POST /v1/config`. The choice is saved to `~/Library/Application Support/SonicFlow/config.json` and used on the next start; `SONICFLOW_ASR` / `SONICFLOW_CLEANUP` override it.
