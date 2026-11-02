@@ -11,7 +11,7 @@ from sonicflow.backends.prompting import (
     cleanup_messages,
     edit_messages,
 )
-from sonicflow.models import ModelNotDownloaded
+from sonicflow.models import ModelNotDownloaded, Think
 
 DEFAULT_URL = "http://127.0.0.1:11434"
 
@@ -66,9 +66,10 @@ class OllamaCleanup(PromptCleanup):
     """Cleanup through a model served by Ollama, on this Mac unless `SONICFLOW_OLLAMA_URL` says
     otherwise."""
 
-    def __init__(self, name: str, model: str) -> None:
+    def __init__(self, name: str, model: str, think: Think = False) -> None:
         self.name = name
         self.model = model
+        self.think = think
 
     def load(self) -> None:
         if self.model not in {m["name"] for m in pulled_models()}:
@@ -82,7 +83,7 @@ class OllamaCleanup(PromptCleanup):
                 "model": self.model,
                 "messages": messages,
                 "stream": False,
-                "think": False,
+                "think": self.think,
                 # Keeps the model and its prompt cache resident between dictations.
                 "keep_alive": "30m",
                 "options": {"temperature": 0, "num_predict": max_tokens},

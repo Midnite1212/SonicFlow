@@ -12,6 +12,7 @@ from sonicflow.downloads import Downloads, remove_download
 from sonicflow.models import (
     FAMILY_KIND,
     Model,
+    Think,
     all_models,
     custom_id,
     family_from_config,
@@ -35,6 +36,7 @@ class NewModel(BaseModel):
     source: str
     family: str | None = None
     title: str | None = None
+    think: Think = False
 
 
 def inspect_hub_repo(repo: str) -> tuple[str, int]:
@@ -58,7 +60,7 @@ def inspect_hub_repo(repo: str) -> tuple[str, int]:
     return family, size
 
 
-def new_ollama_model(name: str, title: str | None) -> Model:
+def new_ollama_model(name: str, title: str | None, think: Think) -> Model:
     from sonicflow.backends.ollama import OllamaUnavailable, pulled_models
 
     try:
@@ -68,7 +70,14 @@ def new_ollama_model(name: str, title: str | None) -> Model:
     if name not in pulled:
         raise ValueError(f"{name} is not pulled in Ollama; run `ollama pull {name}` first")
     return Model(
-        custom_id("ollama", name), "cleanup", "ollama", name, title or name, "custom", pulled[name]
+        custom_id("ollama", name),
+        "cleanup",
+        "ollama",
+        name,
+        title or name,
+        "custom",
+        pulled[name],
+        think=think,
     )
 
 
@@ -97,7 +106,7 @@ def search_hub(query: str, kind: str, limit: int = 30) -> list[dict]:
 
 def new_custom_model(request: NewModel) -> Model:
     if request.family == "ollama":
-        return new_ollama_model(request.source.strip(), request.title)
+        return new_ollama_model(request.source.strip(), request.title, request.think)
     source = request.source.strip()
     folder = Path(source).expanduser()
     if folder.is_absolute() or source.startswith("~"):

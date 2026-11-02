@@ -13,31 +13,31 @@ class PassthroughCleanup(CleanupBackend):
 
 
 # Factories import their heavy dependencies lazily so only the selected backend pays load cost.
-def _parakeet(name: str, source: str) -> ASRBackend:
+def _parakeet(model: Model) -> ASRBackend:
     from sonicflow.backends.parakeet import ParakeetASR
 
-    return ParakeetASR(name, source)
+    return ParakeetASR(model.id, model.source)
 
 
-def _whisper(name: str, source: str) -> ASRBackend:
+def _whisper(model: Model) -> ASRBackend:
     from sonicflow.backends.whisper import WhisperASR
 
-    return WhisperASR(name, source)
+    return WhisperASR(model.id, model.source)
 
 
-def _mlx_lm(name: str, source: str) -> CleanupBackend:
+def _mlx_lm(model: Model) -> CleanupBackend:
     from sonicflow.backends.llm import LLMCleanup
 
-    return LLMCleanup(name, source)
+    return LLMCleanup(model.id, model.source)
 
 
-def _ollama(name: str, source: str) -> CleanupBackend:
+def _ollama(model: Model) -> CleanupBackend:
     from sonicflow.backends.ollama import OllamaCleanup
 
-    return OllamaCleanup(name, source)
+    return OllamaCleanup(model.id, model.source, model.think)
 
 
-FAMILIES: dict[str, Callable[[str, str], ASRBackend | CleanupBackend]] = {
+FAMILIES: dict[str, Callable[[Model], ASRBackend | CleanupBackend]] = {
     "parakeet": _parakeet,
     "whisper": _whisper,
     "mlx-lm": _mlx_lm,
@@ -76,7 +76,7 @@ def _create(kind: str, model_id: str, fixed: dict) -> ASRBackend | CleanupBacken
     model = resolve(model_id)
     if model is None or model.kind != kind or model.family not in FAMILIES:
         raise ValueError(f"unknown {kind} model {model_id!r}; available: {available(kind)}")
-    return FAMILIES[model.family](model.id, model.source)
+    return FAMILIES[model.family](model)
 
 
 def create_asr(model_id: str) -> ASRBackend:

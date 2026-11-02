@@ -166,6 +166,23 @@ def test_routes_list_and_add_ollama_models(fake_ollama, fake_asr):
     assert load_custom() == []
 
 
+def test_think_level_is_saved_with_the_model_and_sent_on_every_chat(fake_asr, fake_ollama):
+    with TestClient(create_app(fake_asr, PassthroughCleanup())) as client:
+        added = client.post(
+            "/v1/models/custom", json={"source": "llama3.2:3b", "family": "ollama", "think": "low"}
+        )
+        assert added.json()["think"] == "low"
+        invalid = client.post(
+            "/v1/models/custom", json={"source": "llama3.2:3b", "family": "ollama", "think": "max"}
+        )
+        assert invalid.status_code == 422
+    backend = create_cleanup("ollama:llama3.2:3b")
+    backend.load()
+    backend.edit("long text", "make it shorter")
+    assert [chat["think"] for chat in FakeOllama.chats] == ["low", "low"]
+    assert OllamaCleanup("o", "llama3.2:3b").think is False
+
+
 def test_ollama_not_running_route(fake_asr, monkeypatch, tmp_path):
     monkeypatch.setenv("SONICFLOW_CONFIG", str(tmp_path / "config.json"))
     monkeypatch.setenv("SONICFLOW_OLLAMA_URL", "http://127.0.0.1:9")
