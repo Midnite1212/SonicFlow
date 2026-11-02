@@ -14,6 +14,10 @@ final class AudioCapture {
     }
 
     static let prerollSamples = 3_200
+    /// Below any real microphone's noise floor: the input delivered digital silence.
+    static let silenceThreshold: Float = 1e-4
+    /// Long enough for a device to start delivering, short enough to keep most of the dictation.
+    static let silentStartTimeout: TimeInterval = 0.5
 
     var onChunk: ((Data) -> Void)?
     var onLevel: ((Float) -> Void)?
@@ -29,6 +33,7 @@ final class AudioCapture {
     private var isArmed = false
     private var isRunning = false
     private var isDictating = false
+    private var dictation = 0
     private var recording = false
     private var pending: [Float] = []
     private var preroll: [Float] = []
@@ -88,12 +93,27 @@ final class AudioCapture {
     func start() throws {
         if !isRunning { try run() }
         isDictating = true
+        dictation += 1
         queue.sync {
             pending = preroll
             preroll.removeAll(keepingCapacity: true)
             sessionPeak = 0
             recording = true
         }
+        let started = dictation
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.silentStartTimeout) { [weak self] in
+            self?.rebuildIfSilent(dictation: started)
+        }
+    }
+
+    /// An input left idle can start again delivering only silence, or nothing at all; rebuilding
+    /// while the key is still held saves the rest of the dictation.
+    private func rebuildIfSilent(dictation started: Int) {
+        guard isDictating, started == dictation,
+            queue.sync(execute: { sessionPeak }) < Self.silenceThreshold
+        else { return }
+        Log.event("input silent at start; rebuilding audio")
+        rebuild()
     }
 
     /// Ends the dictation, emits the final partial chunk, and returns the loudest sample sent.

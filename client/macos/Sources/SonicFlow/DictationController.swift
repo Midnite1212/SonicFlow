@@ -44,9 +44,6 @@ final class DictationController {
         }
     }
 
-    /// Below any real microphone's noise floor: the input delivered digital silence.
-    private static let silenceThreshold: Float = 1e-4
-
     @ObservationIgnored private var gesture: TalkGesture = HoldToTalk()
     @ObservationIgnored private var gestureMode = TalkMode.hold
     @ObservationIgnored private let audio = AudioCapture()
@@ -324,7 +321,7 @@ final class DictationController {
         releasedAt = ProcessInfo.processInfo.systemUptime
         var deliver = deliver
         var reason = reason
-        if deliver, peak < Self.silenceThreshold {
+        if deliver, peak < AudioCapture.silenceThreshold {
             // Speech models invent words from silence, so nothing is pasted.
             deliver = false
             reason = "input delivered only silence; rebuilding audio"
