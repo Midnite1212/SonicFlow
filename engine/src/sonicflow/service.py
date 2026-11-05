@@ -21,6 +21,9 @@ LOG_DIR = Path.home() / "Library" / "Logs" / "SonicFlow"
 APP_DIR = Path.home() / "Library" / "Application Support" / "SonicFlow"
 ENGINE_SOURCE = Path(__file__).resolve().parents[2]
 BACKEND_EXTRAS = ("parakeet", "whisper", "llm")
+# mlx-whisper declares torch but never imports it, and transformers loads torch whenever it is
+# installed: ~300 MB in the engine for nothing.
+UNUSED_PACKAGES = ("torch",)
 
 
 def build_plist(program: Path, log_dir: Path) -> dict:
@@ -87,18 +90,19 @@ def deploy_engine() -> Path:
     python = venv / "bin" / "python"
     requirements = APP_DIR / "requirements.txt"
     extras = [arg for extra in BACKEND_EXTRAS for arg in ("--extra", extra)]
+    unused = [arg for package in UNUSED_PACKAGES for arg in ("--no-emit-package", package)]
 
     APP_DIR.mkdir(parents=True, exist_ok=True)
     subprocess.run([uv, "venv", "-q", "--allow-existing", "-p", "3.12", str(venv)], check=True)
     subprocess.run(
         [uv, "export", "-q", "--project", str(ENGINE_SOURCE), "--frozen", "--no-dev"]
         + ["--no-emit-project", "--no-hashes", "-o", str(requirements)]
-        + extras,
+        + extras
+        + unused,
         check=True,
     )
-    subprocess.run(
-        [uv, "pip", "install", "-q", "-p", str(python), "-r", str(requirements)], check=True
-    )
+    # Sync rather than install, so packages dropped from the requirements leave existing venvs.
+    subprocess.run([uv, "pip", "sync", "-q", "-p", str(python), str(requirements)], check=True)
     subprocess.run(
         [uv, "pip", "install", "-q", "-p", str(python), "--no-deps"]
         + ["--reinstall-package", "sonicflow", str(ENGINE_SOURCE)],

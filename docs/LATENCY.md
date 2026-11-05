@@ -44,6 +44,23 @@ Current matrix (21-item corpus; M3 Pro one run each, M4 Max two). WER spells num
 
 The M4 Max is 2.6–3× faster at every combination with the same WER, and runs v2 + qwen3-4b inside the raw-transcript budget (p95 164–165 ms). Both machines used the same corpus audio: `say` voices differ between macOS releases, and macOS 27's Samantha reads several items as run-on sentences that cost qwen3-1.7b 9 points of clean WER, so compare WER across machines only on identical WAVs.
 
+MLX cache limit, parakeet-v2 + qwen3-4b, `--realtime`, M3 Pro, 2026-11-05 (median of 3–4 interleaved runs; run-to-run p50 noise ~8%). 256 MB is the default: it frees up to 768 MB of engine memory for ~8 ms of finalize.
+
+| Cache limit | release→text p50 | finalize p50 | WER clean |
+|---|---|---|---|
+| 1024 MB | 382 ms | 134 ms | 0.8% |
+| 512 MB | 410 ms | 142 ms | 0.8% |
+| 256 MB | 400 ms | 142 ms | 0.8% |
+
+Parakeet quantized to 8 bits at load (ADR 0009), same setup with a 256 MB cache, 2–4 runs each:
+
+| ASR | Weights | release→text p50 | finalize p50 | WER raw |
+|---|---|---|---|---|
+| parakeet-v2 bf16 | 1,178 MB | 400 ms | 142 ms | 1.3% |
+| parakeet-v2 int8 | 700 MB | 330 ms | 95 ms | 1.3% |
+| parakeet-v3 bf16 | — | 381 ms | 142 ms | 1.6% |
+| parakeet-v3 int8 | — | 347 ms | 95 ms | 1.6% |
+
 History (WER before normalisation):
 
 | Date | Machine | ASR | Cleanup | release→text p50 / p95 | WER raw | WER clean |
