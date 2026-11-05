@@ -1,4 +1,5 @@
 import mlx.core as mx
+import mlx.nn as nn
 import numpy as np
 from mlx.utils import tree_flatten
 from parakeet_mlx import BaseParakeet, from_pretrained
@@ -19,6 +20,7 @@ class ParakeetASR(ASRBackend):
 
     def load(self) -> None:
         self._model = from_pretrained(local_path(self.repo_id))
+        nn.quantize(self._model, group_size=64, bits=8)
         self.transcribe(np.zeros(self.sample_rate, dtype=np.float32))
 
     def unload(self) -> None:
